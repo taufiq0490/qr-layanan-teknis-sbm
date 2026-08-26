@@ -8,6 +8,13 @@ function escapeHTML(str) {
     .replace(/'/g, '&#039;');
 }
 
+function getAuthHeaders() {
+  const token = localStorage.getItem('admin_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['x-admin-token'] = token;
+  return headers;
+}
+
 let currentFilter = 'all';
 let previousTicketCount = null;
 
@@ -33,7 +40,10 @@ function playBeep() {
 async function handleLogout() {
   if (confirm('Apakah Anda yakin ingin keluar dari sesi admin?')) {
     try {
-      await fetch('/api/admin/logout', { method: 'POST' });
+      await fetch('/api/admin/logout', {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
     } catch (e) {}
     localStorage.removeItem('admin_token');
     window.location.href = '/login';
@@ -42,7 +52,9 @@ async function handleLogout() {
 
 async function loadTickets() {
   try {
-    const res = await fetch('/api/tickets');
+    const res = await fetch('/api/tickets', {
+      headers: getAuthHeaders()
+    });
     if (res.status === 401) {
       window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
       return;
@@ -179,7 +191,7 @@ async function updateStatus(ticketId, newStatus, handledBy = "") {
 
     const res = await fetch(`/api/tickets/${ticketId}/status`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(payload)
     });
     if (res.status === 401) {
@@ -226,7 +238,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       try {
-        const res = await fetch('/api/admin/clear-tickets', { method: 'POST' });
+        const res = await fetch('/api/admin/clear-tickets', {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
         if (res.status === 401) {
           window.location.href = '/login';
           return;

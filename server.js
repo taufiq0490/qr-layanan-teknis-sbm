@@ -15,6 +15,7 @@ const {
   sanitizeString
 } = require('./services/storage');
 const { sendClassroomAlert } = require('./services/waGateway');
+const { sendTelegramAlert } = require('./services/telegramGateway');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -73,20 +74,39 @@ function callRateLimiter(req, res, next) {
   next();
 }
 
-// --- ADMIN AUTHENTICATION HELPERS & MIDDLEWARE ---
+// --- ADMIN AUTHENTICATION (Stateless Signed Tokens for Vercel Serverless & Local) ---
+const AUTH_SECRET = 'SBM_ITB_SESSION_SECRET_KEY_9921_JAKARTA';
+
+function generateAdminToken() {
+  const payload = {
+    role: 'admin',
+    exp: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+  };
+  const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto.createHmac('sha256', AUTH_SECRET).update(payloadStr).digest('base64url');
+  return `${payloadStr}.${signature}`;
+}
+
+function verifyAdminToken(token) {
+  if (!token || typeof token !== 'string' || !token.includes('.')) return false;
+  try {
+    const [payloadStr, signature] = token.split('.');
+    const expectedSig = crypto.createHmac('sha256', AUTH_SECRET).update(payloadStr).digest('base64url');
+    if (signature !== expectedSig) return false;
+
+    const payload = JSON.parse(Buffer.from(payloadStr, 'base64url').toString('utf-8'));
+    if (!payload.exp || Date.now() > payload.exp) return false;
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 function isValidAdminSession(req) {
   const cookies = parseCookies(req);
   const token = req.headers['x-admin-token'] || req.headers['authorization']?.replace('Bearer ', '') || cookies.admin_session;
   if (!token) return false;
-
-  const sessionExp = activeSessions.get(token);
-  if (!sessionExp) return false;
-
-  if (Date.now() > sessionExp) {
-    activeSessions.delete(token);
-    return false;
-  }
-  return true;
+  return verifyAdminToken(token);
 }
 
 function requireAdminAuthAPI(req, res, next) {
@@ -139,9 +159,7 @@ app.post('/api/admin/login', (req, res) => {
   const validPassword = process.env.ADMIN_PASSWORD || config.adminPassword || 'admin';
 
   if (password === validPassword) {
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiry = Date.now() + SESSION_DURATION_MS;
-    activeSessions.set(token, expiry);
+    const token = generateAdminToken();
 
     // Set cookie for browser navigation
     res.setHeader('Set-Cookie', `admin_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
@@ -153,11 +171,6 @@ app.post('/api/admin/login', (req, res) => {
 
 // Admin Logout
 app.post('/api/admin/logout', (req, res) => {
-  const cookies = parseCookies(req);
-  const token = req.headers['x-admin-token'] || cookies.admin_session;
-  if (token) {
-    activeSessions.delete(token);
-  }
   res.setHeader('Set-Cookie', `admin_session=; Path=/; HttpOnly; Max-Age=0`);
   res.json({ success: true, message: 'Berhasil logout.' });
 });
@@ -219,20 +232,37 @@ app.post('/api/call', callRateLimiter, async (req, res) => {
     // Create new ticket record
     const ticket = createTicket(safeRoom, safeCategory, safeNotes);
 
-    // Send WhatsApp notification
-    const waResult = await sendClassroomAlert({
-      room: safeRoom,
-      category: safeCategory,
-      notes: safeNotes,
-      ticketId: ticket.id
-    });
+    // Send notifications based on configured channel (wa, telegram, or both)
+    const config = readConfig();
+    const channel = config.notificationChannel || 'both';
 
-    // Update ticket with WA dispatch result
+    let waResult = { success: false, mode: 'skipped' };
+    let teleResult = { success: false, mode: 'skipped' };
+
+    if (channel === 'both' || channel === 'fonnte' || channel === 'wa') {
+      waResult = await sendClassroomAlert({
+        room: safeRoom,
+        category: safeCategory,
+        notes: safeNotes,
+        ticketId: ticket.id
+      });
+    }
+
+    if (channel === 'both' || channel === 'telegram') {
+      teleResult = await sendTelegramAlert({
+        room: safeRoom,
+        category: safeCategory,
+        notes: safeNotes,
+        ticketId: ticket.id
+      });
+    }
+
+    // Update ticket with notification dispatch result
     updateTicketWaStatus(ticket.id, {
-      sent: waResult.success,
-      provider: waResult.provider || waResult.mode || 'unknown',
+      sent: waResult.success || teleResult.success,
+      provider: channel,
       timestamp: new Date().toISOString(),
-      details: waResult
+      details: { waResult, teleResult }
     });
 
     res.json({
@@ -247,9 +277,10 @@ app.post('/api/call', callRateLimiter, async (req, res) => {
         status: ticket.status,
         handledBy: ticket.handledBy || ""
       },
-      waDispatch: {
-        success: waResult.success,
-        mode: waResult.mode || waResult.provider
+      dispatch: {
+        channel,
+        wa: waResult,
+        telegram: teleResult
       }
     });
   } catch (error) {
@@ -370,6 +401,7 @@ app.post('/api/admin/clear-tickets', requireAdminAuthAPI, (req, res) => {
 app.get('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
   const config = readConfig();
   const rawToken = (config.waGateway && config.waGateway.fonnteToken) || '';
+  const rawTeleToken = (config.telegramGateway && config.telegramGateway.botToken) || '';
   
   res.json({
     success: true,
@@ -378,6 +410,7 @@ app.get('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
       rooms: config.rooms,
       messageTemplate: config.messageTemplate,
       claimBaseUrl: config.claimBaseUrl || "https://qr-layanan-teknis-sbm.vercel.app",
+      notificationChannel: config.notificationChannel || 'both',
       waGateway: {
         provider: config.waGateway?.provider || 'fonnte',
         fonnteToken: maskToken(rawToken),
@@ -385,6 +418,12 @@ app.get('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
         staffNumbers: config.waGateway?.staffNumbers || [],
         countryCode: config.waGateway?.countryCode || '62',
         webhookUrl: config.waGateway?.webhookUrl || ''
+      },
+      telegramGateway: {
+        enabled: config.telegramGateway?.enabled !== false,
+        botToken: maskToken(rawTeleToken),
+        hasBotToken: Boolean(rawTeleToken),
+        chatIds: config.telegramGateway?.chatIds || []
       }
     }
   });
@@ -392,15 +431,24 @@ app.get('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
 
 // 7. Save Settings (Admin - Protected with SAFE TOKEN PRESERVATION)
 app.post('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
-  const { appTitle, rooms, messageTemplate, claimBaseUrl, waGateway, adminPassword } = req.body;
+  const { appTitle, rooms, messageTemplate, claimBaseUrl, notificationChannel, waGateway, telegramGateway, adminPassword } = req.body;
   const currentConfig = readConfig();
 
-  // If token is masked or not provided, preserve existing token
+  // If WA token is masked or not provided, preserve existing token
   let tokenToSave = currentConfig.waGateway?.fonnteToken || '';
   if (waGateway && typeof waGateway.fonnteToken === 'string') {
     const inputToken = waGateway.fonnteToken.trim();
     if (inputToken && !inputToken.includes('••••') && !inputToken.includes('****')) {
       tokenToSave = inputToken;
+    }
+  }
+
+  // If Telegram token is masked or not provided, preserve existing token
+  let teleTokenToSave = currentConfig.telegramGateway?.botToken || '';
+  if (telegramGateway && typeof telegramGateway.botToken === 'string') {
+    const inputTeleToken = telegramGateway.botToken.trim();
+    if (inputTeleToken && !inputTeleToken.includes('••••') && !inputTeleToken.includes('****')) {
+      teleTokenToSave = inputTeleToken;
     }
   }
 
@@ -410,6 +458,7 @@ app.post('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
     rooms: Array.isArray(rooms) ? rooms.map(sanitizeString).filter(r => r !== '') : currentConfig.rooms,
     messageTemplate: messageTemplate ? sanitizeString(messageTemplate) : currentConfig.messageTemplate,
     claimBaseUrl: claimBaseUrl ? sanitizeString(claimBaseUrl) : (currentConfig.claimBaseUrl || "https://qr-layanan-teknis-sbm.vercel.app"),
+    notificationChannel: notificationChannel || currentConfig.notificationChannel || 'both',
     adminPassword: adminPassword && adminPassword.trim() ? adminPassword.trim() : currentConfig.adminPassword,
     waGateway: {
       ...currentConfig.waGateway,
@@ -418,6 +467,11 @@ app.post('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
       staffNumbers: Array.isArray(waGateway?.staffNumbers) ? waGateway.staffNumbers : currentConfig.waGateway?.staffNumbers,
       countryCode: waGateway?.countryCode || currentConfig.waGateway?.countryCode || '62',
       webhookUrl: waGateway?.webhookUrl || currentConfig.waGateway?.webhookUrl || ''
+    },
+    telegramGateway: {
+      enabled: telegramGateway?.enabled !== false,
+      botToken: teleTokenToSave,
+      chatIds: Array.isArray(telegramGateway?.chatIds) ? telegramGateway.chatIds : (currentConfig.telegramGateway?.chatIds || [])
     }
   };
 
@@ -432,15 +486,62 @@ app.post('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
 // 8. Test WhatsApp Gateway (Admin - Protected)
 app.post('/api/admin/test-wa', requireAdminAuthAPI, async (req, res) => {
   try {
+    const testTicket = createTicket(
+      "Ruang Simulasi/Test",
+      "Uji Coba Sistem WA",
+      "Pesan uji coba WhatsApp dari Dashboard Admin SBM ITB"
+    );
+
     const testResult = await sendClassroomAlert({
-      room: "Ruang Simulasi/Test",
-      category: "Uji Coba Sistem",
-      notes: "Ini adalah pesan uji coba dari Dashboard Admin SBM ITB",
-      ticketId: "TEST-" + Date.now().toString(36).toUpperCase()
+      room: testTicket.room,
+      category: testTicket.category,
+      notes: testTicket.notes,
+      ticketId: testTicket.id
+    });
+
+    updateTicketWaStatus(testTicket.id, {
+      sent: testResult.success,
+      provider: 'fonnte',
+      timestamp: new Date().toISOString(),
+      details: testResult
     });
 
     res.json({
       success: testResult.success,
+      ticketId: testTicket.id,
+      result: testResult
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 8.1 Test Telegram Gateway (Admin - Protected)
+app.post('/api/admin/test-telegram', requireAdminAuthAPI, async (req, res) => {
+  try {
+    const testTicket = createTicket(
+      "Ruang Simulasi/Test",
+      "Uji Coba Sistem Telegram",
+      "Pesan uji coba Telegram Bot dari Dashboard Admin SBM ITB"
+    );
+
+    const testResult = await sendTelegramAlert({
+      room: testTicket.room,
+      category: testTicket.category,
+      notes: testTicket.notes,
+      ticketId: testTicket.id
+    });
+
+    updateTicketWaStatus(testTicket.id, {
+      sent: testResult.success,
+      provider: 'telegram',
+      timestamp: new Date().toISOString(),
+      details: testResult
+    });
+
+    res.json({
+      success: testResult.success,
+      ticketId: testTicket.id,
       result: testResult
     });
   } catch (err) {

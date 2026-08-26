@@ -98,10 +98,19 @@ async function loadRooms() {
   }
 }
 
+function getAuthHeaders() {
+  const token = localStorage.getItem('admin_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['x-admin-token'] = token;
+  return headers;
+}
+
 // 3. Fetch Tickets
 async function loadTickets() {
   try {
-    const res = await fetch('/api/tickets');
+    const res = await fetch('/api/tickets', {
+      headers: getAuthHeaders()
+    });
     if (res.status === 401) {
       window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
       return;

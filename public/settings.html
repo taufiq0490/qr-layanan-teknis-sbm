@@ -87,62 +87,126 @@
     <!-- Main Settings Form Card -->
     <div class="card">
       <div class="card-header">
-        <h2 class="card-title">Konfigurasi WhatsApp Gateway & Sistem</h2>
+        <h2 class="card-title">Konfigurasi Notifikasi (WhatsApp & Telegram)</h2>
       </div>
 
       <form id="settingsForm">
-        
-        <!-- Fonnte Token (Masked for Security) -->
-        <div class="form-group">
-          <label class="form-label" for="fonnteToken">Fonnte API Token (Disamarkan untuk Keamanan):</label>
-          <input type="text" id="fonnteToken" class="form-control" placeholder="Isi token baru atau biarkan jika tidak diubah...">
-          <small style="color: var(--text-muted); font-size: 0.8rem;">Token disensor (••••••••). Isi nilai baru jika ingin mengganti token Fonnte.</small>
-        </div>
 
-        <!-- Staff WhatsApp Numbers -->
-        <div class="form-group">
-          <label class="form-label" for="staffNumbersInput">Nomor WhatsApp Staf Penerima Notifikasi:</label>
-          <input type="text" id="staffNumbersInput" class="form-control" placeholder="Contoh: 081234567890, 089876543210 (pisahkan dengan koma jika lebih dari 1)">
-          <small style="color: var(--text-muted); font-size: 0.8rem;">Nomor staf ini 100% terlindungi dan tidak akan terlihat di HP dosen/mahasiswa.</small>
-        </div>
-
-        <!-- Message Template -->
-        <div class="form-group">
-          <label class="form-label" for="messageTemplate">Template Isi Pesan:</label>
-          <input type="text" id="messageTemplate" class="form-control" value="Mohon bantuan teknis di ruang {room} SEGERA!">
-          <small style="color: var(--text-muted); font-size: 0.8rem;">Gunakan kode <code>{room}</code> untuk nama ruangan otomatis.</small>
-        </div>
-
-        <!-- Claim Base URL (For WhatsApp Quick Action Link) -->
-        <div class="form-group">
-          <label class="form-label" for="claimBaseUrl">Domain Klaim Cepat WhatsApp:</label>
-          <input type="text" id="claimBaseUrl" class="form-control" value="https://qr-layanan-teknis-sbm.vercel.app">
-          <small style="color: var(--text-muted); font-size: 0.8rem;">Link ini disisipkan di pesan WhatsApp untuk staf klaim tiket instan.</small>
-        </div>
-
-        <!-- Admin Password Change -->
-        <div class="form-group">
-          <label class="form-label" for="adminPasswordInput">Ubah Kata Sandi Admin (Opsional):</label>
-          <input type="password" id="adminPasswordInput" class="form-control" placeholder="Kosongkan jika tidak ingin mengubah kata sandi...">
-          <small style="color: var(--text-muted); font-size: 0.8rem;">Kata sandi digunakan untuk login ke portal admin.</small>
-        </div>
-
-        <!-- Classroom List -->
-        <div class="form-group">
-          <label class="form-label">Daftar Ruangan Terdaftar (SBM ITB Jakarta):</label>
-          <div class="tag-container" id="roomTagsContainer">
-            <!-- Room tags dynamically rendered -->
-          </div>
-          <div style="display: flex; gap: 8px; margin-top: 10px;">
-            <input type="text" id="newRoomInput" class="form-control" placeholder="Tambah nama ruang baru (misal: Ruang 102)..." style="max-width: 320px;">
-            <button type="button" class="btn btn-outline" id="btnAddRoom">➕ Tambah</button>
+        <!-- Notification Channel Selection -->
+        <div class="form-group" style="background: #F8FAFC; border: 1.5px solid var(--border-color); border-radius: 10px; padding: 14px;">
+          <label class="form-label" style="font-weight: 800; color: var(--primary);">📢 Saluran Notifikasi yang Digunakan:</label>
+          <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 8px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer;">
+              <input type="radio" name="notificationChannel" value="both" checked>
+              <span>🟢 Keduanya (WhatsApp + Telegram)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer;">
+              <input type="radio" name="notificationChannel" value="telegram">
+              <span>✈️ Telegram Bot Saja (100% Gratis & Unlimited)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer;">
+              <input type="radio" name="notificationChannel" value="fonnte">
+              <span>💬 WhatsApp Fonnte Saja</span>
+            </label>
           </div>
         </div>
 
-        <!-- Save Button & Test -->
-        <div style="display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap;">
-          <button type="submit" class="btn btn-primary" id="btnSave">
-            💾 Simpan Pengaturan
+        <!-- Section: Telegram Bot -->
+        <div style="border-top: 2px dashed #CBD5E1; padding-top: 16px; margin-top: 20px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <span style="font-size: 1.3rem;">✈️</span>
+            <h3 style="font-size: 1.1rem; color: #0284C7; margin: 0;">Pengaturan Telegram Bot (Gratis & Bebas Kuota)</h3>
+          </div>
+
+          <div style="background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #0369A1; margin-bottom: 14px;">
+            <strong>Cara Cepat Setup Telegram Bot (1 Menit):</strong>
+            <ol style="margin-left: 18px; margin-top: 4px;">
+              <li>Buka Telegram, chat <strong>@BotFather</strong>, ketik <code>/newbot</code>, ikuti petunjuk dan salin <strong>Bot Token</strong>.</li>
+              <li>Buat <strong>Grup Telegram</strong> bersama staf support, masukkan bot ke grup tersebut.</li>
+              <li>Masukkan <strong>Chat ID Grup</strong> (contoh: <code>-100123456789</code>) atau Chat ID pribadi ke kolom di bawah.</li>
+            </ol>
+          </div>
+
+          <!-- Telegram Bot Token -->
+          <div class="form-group">
+            <label class="form-label" for="teleBotToken">Telegram Bot Token (Disamarkan untuk Keamanan):</label>
+            <input type="text" id="teleBotToken" class="form-control" placeholder="Contoh: 7123456789:AAFx...">
+            <small style="color: var(--text-muted); font-size: 0.8rem;">Dapatkan token gratis dari @BotFather di aplikasi Telegram.</small>
+          </div>
+
+          <!-- Telegram Chat IDs -->
+          <div class="form-group">
+            <label class="form-label" for="teleChatIds">Telegram Chat ID / Group ID Penerima:</label>
+            <input type="text" id="teleChatIds" class="form-control" placeholder="Contoh: -100123456789 atau 12345678 (pisahkan dengan koma jika lebih dari 1)">
+            <small style="color: var(--text-muted); font-size: 0.8rem;">ID Grup staf atau ID user Telegram yang akan menerima notifikasi panggilan.</small>
+          </div>
+        </div>
+
+        <!-- Section: WhatsApp Gateway -->
+        <div style="border-top: 2px dashed #CBD5E1; padding-top: 16px; margin-top: 20px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <span style="font-size: 1.3rem;">💬</span>
+            <h3 style="font-size: 1.1rem; color: #059669; margin: 0;">Pengaturan WhatsApp Gateway (Fonnte)</h3>
+          </div>
+
+          <!-- Fonnte Token (Masked for Security) -->
+          <div class="form-group">
+            <label class="form-label" for="fonnteToken">Fonnte API Token (Disamarkan untuk Keamanan):</label>
+            <input type="text" id="fonnteToken" class="form-control" placeholder="Isi token baru atau biarkan jika tidak diubah...">
+            <small style="color: var(--text-muted); font-size: 0.8rem;">Token disensor (••••••••). Isi nilai baru jika ingin mengganti token Fonnte.</small>
+          </div>
+
+          <!-- Staff WhatsApp Numbers -->
+          <div class="form-group">
+            <label class="form-label" for="staffNumbersInput">Nomor WhatsApp Staf Penerima Notifikasi:</label>
+            <input type="text" id="staffNumbersInput" class="form-control" placeholder="Contoh: 081234567890, 089876543210 (pisahkan dengan koma jika lebih dari 1)">
+            <small style="color: var(--text-muted); font-size: 0.8rem;">Nomor staf ini 100% terlindungi dan tidak akan terlihat di HP dosen/mahasiswa.</small>
+          </div>
+        </div>
+
+        <!-- Section: General Settings -->
+        <div style="border-top: 2px dashed #CBD5E1; padding-top: 16px; margin-top: 20px;">
+          <!-- Message Template -->
+          <div class="form-group">
+            <label class="form-label" for="messageTemplate">Template Isi Pesan:</label>
+            <input type="text" id="messageTemplate" class="form-control" value="Mohon bantuan teknis di ruang {room} SEGERA!">
+            <small style="color: var(--text-muted); font-size: 0.8rem;">Gunakan kode <code>{room}</code> untuk nama ruangan otomatis.</small>
+          </div>
+
+          <!-- Claim Base URL (For WhatsApp & Telegram Quick Action Link) -->
+          <div class="form-group">
+            <label class="form-label" for="claimBaseUrl">Domain Klaim Cepat (URL Vercel/Hosting):</label>
+            <input type="text" id="claimBaseUrl" class="form-control" value="https://qr-layanan-teknis-sbm.vercel.app">
+            <small style="color: var(--text-muted); font-size: 0.8rem;">Link tombol klaim instan di WhatsApp & Telegram.</small>
+          </div>
+
+          <!-- Admin Password Change -->
+          <div class="form-group">
+            <label class="form-label" for="adminPasswordInput">Ubah Kata Sandi Admin (Opsional):</label>
+            <input type="password" id="adminPasswordInput" class="form-control" placeholder="Kosongkan jika tidak ingin mengubah kata sandi...">
+            <small style="color: var(--text-muted); font-size: 0.8rem;">Kata sandi digunakan untuk login ke portal admin.</small>
+          </div>
+
+          <!-- Classroom List -->
+          <div class="form-group">
+            <label class="form-label">Daftar Ruangan Terdaftar (SBM ITB Jakarta):</label>
+            <div class="tag-container" id="roomTagsContainer">
+              <!-- Room tags dynamically rendered -->
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+              <input type="text" id="newRoomInput" class="form-control" placeholder="Tambah nama ruang baru (misal: Ruang 102)..." style="max-width: 320px;">
+              <button type="button" class="btn btn-outline" id="btnAddRoom">➕ Tambah</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Save Button & Test Buttons -->
+        <div style="display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap;">
+          <button type="submit" class="btn btn-primary" id="btnSave" style="padding: 10px 20px;">
+            💾 Simpan Semua Pengaturan
+          </button>
+          <button type="button" class="btn btn-outline" id="btnTestTele" style="color: #0284C7; border-color: #38BDF8;">
+            ✈️ Uji Coba Kirim Telegram
           </button>
           <button type="button" class="btn btn-gold" id="btnTestWa">
             📲 Uji Coba Kirim WA

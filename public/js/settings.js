@@ -18,9 +18,18 @@ async function handleLogout() {
   }
 }
 
+function getAuthHeaders() {
+  const token = localStorage.getItem('admin_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['x-admin-token'] = token;
+  return headers;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const fonnteToken = document.getElementById('fonnteToken');
   const staffNumbersInput = document.getElementById('staffNumbersInput');
+  const teleBotToken = document.getElementById('teleBotToken');
+  const teleChatIds = document.getElementById('teleChatIds');
   const messageTemplate = document.getElementById('messageTemplate');
   const claimBaseUrl = document.getElementById('claimBaseUrl');
   const adminPasswordInput = document.getElementById('adminPasswordInput');
@@ -29,12 +38,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnAddRoom = document.getElementById('btnAddRoom');
   const settingsForm = document.getElementById('settingsForm');
   const btnTestWa = document.getElementById('btnTestWa');
+  const btnTestTele = document.getElementById('btnTestTele');
 
   let currentRooms = [];
 
   // Load Settings from API
   try {
-    const res = await fetch('/api/admin/settings');
+    const res = await fetch('/api/admin/settings', {
+      headers: getAuthHeaders()
+    });
     if (res.status === 401) {
       window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
       return;
@@ -42,8 +54,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const data = await res.json();
     if (data.success) {
       const s = data.settings;
+      
+      // Radio notificationChannel
+      const chVal = s.notificationChannel || 'both';
+      const rad = document.querySelector(`input[name="notificationChannel"][value="${chVal}"]`);
+      if (rad) rad.checked = true;
+
+      // Telegram
+      if (teleBotToken) teleBotToken.value = (s.telegramGateway && s.telegramGateway.botToken) || '';
+      if (teleChatIds) teleChatIds.value = (s.telegramGateway && s.telegramGateway.chatIds) ? s.telegramGateway.chatIds.join(', ') : '';
+
+      // WA
       fonnteToken.value = (s.waGateway && s.waGateway.fonnteToken) || '';
       staffNumbersInput.value = (s.waGateway && s.waGateway.staffNumbers) ? s.waGateway.staffNumbers.join(', ') : '';
+      
       messageTemplate.value = s.messageTemplate || "Mohon bantuan teknis di ruang {room} SEGERA!";
       if (claimBaseUrl) claimBaseUrl.value = s.claimBaseUrl || "https://qr-layanan-teknis-sbm.vercel.app";
       currentRooms = s.rooms || [
@@ -92,24 +116,36 @@ document.addEventListener('DOMContentLoaded', async () => {
       .map(s => s.trim())
       .filter(Boolean);
 
+    const chatIds = teleChatIds.value
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const selectedChannel = document.querySelector('input[name="notificationChannel"]:checked')?.value || 'both';
     const newPass = adminPasswordInput && adminPasswordInput.value.trim();
 
     const payload = {
       messageTemplate: messageTemplate.value.trim(),
       claimBaseUrl: claimBaseUrl ? claimBaseUrl.value.trim() : undefined,
+      notificationChannel: selectedChannel,
       adminPassword: newPass || undefined,
       rooms: currentRooms,
       waGateway: {
         provider: fonnteToken.value.trim() ? 'fonnte' : 'simulation',
         fonnteToken: fonnteToken.value.trim(),
         staffNumbers: staffNumbers
+      },
+      telegramGateway: {
+        enabled: true,
+        botToken: teleBotToken.value.trim(),
+        chatIds: chatIds
       }
     };
 
     try {
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload)
       });
       if (res.status === 401) {
@@ -121,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (newPass) {
           alert('✅ Pengaturan & Kata Sandi Admin baru berhasil disimpan! Silakan gunakan kata sandi baru saat login berikutnya.');
         } else {
-          alert('✅ Pengaturan sistem & WhatsApp Gateway berhasil disimpan!');
+          alert('✅ Pengaturan sistem, WhatsApp, & Telegram Bot berhasil disimpan!');
         }
         if (adminPasswordInput) adminPasswordInput.value = '';
       } else {
@@ -133,13 +169,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // Test Telegram
+  if (btnTestTele) {
+    btnTestTele.addEventListener('click', async () => {
+      btnTestTele.disabled = true;
+      btnTestTele.textContent = '⏳ Mengirim Telegram...';
+
+      try {
+        const res = await fetch('/api/admin/test-telegram', {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        if (res.status === 401) {
+          window.location.href = '/login';
+          return;
+        }
+        const data = await res.json();
+
+        if (data.success) {
+          if (data.result && data.result.mode === 'simulation') {
+            alert('ℹ️ Mode Simulasi: Pesan Telegram tercatat di log server. (Isi Bot Token dan Chat ID untuk mengirim ke Telegram asli).');
+          } else {
+            alert('✅ Pesan Telegram uji coba berhasil dikirim ke grup/akun staf support!');
+          }
+        } else {
+          alert('❌ Gagal mengirim Telegram: ' + (data.error || JSON.stringify(data.result)));
+        }
+      } catch (err) {
+        console.error('Test Telegram error:', err);
+        alert('Terjadi kesalahan saat memanggil API Telegram.');
+      } finally {
+        btnTestTele.disabled = false;
+        btnTestTele.textContent = '✈️ Uji Coba Kirim Telegram';
+      }
+    });
+  }
+
   // Test WhatsApp
   btnTestWa.addEventListener('click', async () => {
     btnTestWa.disabled = true;
     btnTestWa.textContent = '⏳ Mengirim Uji Coba...';
 
     try {
-      const res = await fetch('/api/admin/test-wa', { method: 'POST' });
+      const res = await fetch('/api/admin/test-wa', {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
       if (res.status === 401) {
         window.location.href = '/login';
         return;
