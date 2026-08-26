@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengaturan WhatsApp Gateway - SBM ITB Jakarta</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .guide-box {
+      background: #EFF6FF;
+      border: 1.5px solid #BFDBFE;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      color: #1E3A8A;
+      line-height: 1.5;
+    }
+    .guide-box ol {
+      margin-left: 20px;
+      margin-top: 8px;
+    }
+    .guide-box li {
+      margin-bottom: 4px;
+    }
+    .tag-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .tag-item {
+      background: #F1F5F9;
+      border: 1px solid #CBD5E1;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+    .tag-remove {
+      color: #EF4444;
+      cursor: pointer;
+      font-weight: 800;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <span class="brand-badge">SBM ITB</span>
+      <div class="brand-text">
+        <h1>Pengaturan Sistem & WA</h1>
+        <p>Kampus Jakarta</p>
+      </div>
+    </div>
+    <nav class="nav-links">
+      <a href="/" class="nav-link">🏠 Portal Ruangan</a>
+      <a href="/admin/print-qr" class="nav-link">🖨️ Cetak Kartu QR</a>
+      <a href="/admin" class="nav-link">📊 Dashboard</a>
+      <a href="/admin/settings" class="nav-link active">⚙️ Pengaturan WA</a>
+    </nav>
+  </header>
+
+  <main class="container" style="max-width: 800px;">
+    
+    <!-- Free Gateway Guide Box -->
+    <div class="guide-box">
+      <strong>💡 Panduan Menghubungkan WhatsApp Gateway Gratis (Fonnte):</strong>
+      <ol>
+        <li>Buka <a href="https://fonnte.com" target="_blank" style="color: #1D4ED8; font-weight: 700; text-decoration: underline;">fonnte.com</a> dan buat akun gratis.</li>
+        <li>Hubungkan nomor WhatsApp staf/bot dengan scan QR di dashboard Fonnte.</li>
+        <li>Salin <strong>API Token</strong> yang diberikan Fonnte ke form di bawah ini.</li>
+        <li>Masukkan nomor WhatsApp staf penerima notifikasi, lalu klik <strong>Simpan</strong> & <strong>Uji Coba Kirim</strong>.</li>
+      </ol>
+      <div style="margin-top: 6px; font-size: 0.8rem; color: #3B82F6;">
+        *Catatan: Selama token belum diisi, sistem berjalan dalam <strong>Mode Simulasi</strong> (semua pesan tercatat di dashboard & log server tanpa error).
+      </div>
+    </div>
+
+    <!-- Main Settings Form Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Konfigurasi WhatsApp Gateway</h2>
+      </div>
+
+      <form id="settingsForm">
+        
+        <!-- Fonnte Token -->
+        <div class="form-group">
+          <label class="form-label" for="fonnteToken">Fonnte API Token:</label>
+          <input type="text" id="fonnteToken" class="form-control" placeholder="Contoh: aBCd1234EfGh5678...">
+          <small style="color: var(--text-muted); font-size: 0.8rem;">Dapatkan token gratis dari dashboard <a href="https://fonnte.com" target="_blank">fonnte.com</a></small>
+        </div>
+
+        <!-- Staff WhatsApp Numbers -->
+        <div class="form-group">
+          <label class="form-label" for="staffNumbersInput">Nomor WhatsApp Staf Penerima Notifikasi:</label>
+          <input type="text" id="staffNumbersInput" class="form-control" placeholder="Contoh: 081234567890, 089876543210 (pisahkan dengan koma jika lebih dari 1)">
+          <small style="color: var(--text-muted); font-size: 0.8rem;">Nomor staf ini 100% terlindungi dan tidak akan terlihat di HP dosen/mahasiswa.</small>
+        </div>
+
+        <!-- Message Template -->
+        <div class="form-group">
+          <label class="form-label" for="messageTemplate">Template Isi Pesan:</label>
+          <input type="text" id="messageTemplate" class="form-control" value="Mohon bantuan teknis di ruang {room} SEGERA!">
+          <small style="color: var(--text-muted); font-size: 0.8rem;">Gunakan kode <code>{room}</code> untuk nama ruangan otomatis.</small>
+        </div>
+
+        <!-- Classroom List -->
+        <div class="form-group">
+          <label class="form-label">Daftar Ruangan Terdaftar (SBM ITB Jakarta):</label>
+          <div class="tag-container" id="roomTagsContainer">
+            <!-- Room tags dynamically rendered -->
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <input type="text" id="newRoomInput" class="form-control" placeholder="Tambah nama ruang baru (misal: Ruang 102)..." style="max-width: 320px;">
+            <button type="button" class="btn btn-outline" id="btnAddRoom">➕ Tambah</button>
+          </div>
+        </div>
+
+        <!-- Save Button & Test -->
+        <div style="display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap;">
+          <button type="submit" class="btn btn-primary" id="btnSave">
+            💾 Simpan Pengaturan
+          </button>
+          <button type="button" class="btn btn-gold" id="btnTestWa">
+            📲 Uji Coba Kirim WA
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 SBM ITB Jakarta - Tim Dukungan Operasional & Teknis Perkuliahan</p>
+  </footer>
+
+  <script src="/js/settings.js"></script>
+</body>
+</html>

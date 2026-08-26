@@ -1,0 +1,22 @@
+{
+  "appTitle": "Layanan Bantuan Teknis SBM ITB Jakarta",
+  "rooms": [
+    "Henk Uno",
+    "Kirana Megatara 1",
+    "Kirana Megatara 2",
+    "Noni Purnomo",
+    "Medco",
+    "12A Room"
+  ],
+  "messageTemplate": "Mohon bantuan di ruang {room} SEGERA!",
+  "waGateway": {
+    "provider": "fonnte",
+    "fonnteToken": "TxGywNUAMtKAdzKrCZoS",
+    "staffNumbers": [
+      "087854277345"
+    ],
+    "countryCode": "62",
+    "webhookUrl": ""
+  },
+  "adminPassword": "admin"
+}

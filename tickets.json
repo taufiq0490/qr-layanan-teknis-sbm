@@ -1,0 +1,266 @@
+[
+  {
+    "id": "TICK-MT9SND72-534",
+    "room": "Henk Uno",
+    "category": "Umum",
+    "notes": "",
+    "status": "Menunggu",
+    "createdAt": "2026-08-26T07:50:12.878Z",
+    "updatedAt": "2026-08-26T07:50:14.348Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "fonnte",
+      "timestamp": "2026-08-26T07:50:14.345Z",
+      "details": {
+        "success": true,
+        "provider": "fonnte",
+        "data": {
+          "detail": "success! message in queue",
+          "id": [
+            175281330
+          ],
+          "process": "pending",
+          "quota": {
+            "081380871850": {
+              "details": "deduced from total quota",
+              "quota": 995,
+              "remaining": 994,
+              "used": 1
+            }
+          },
+          "requestid": 672039641,
+          "status": true,
+          "target": [
+            "6287854277345"
+          ]
+        },
+        "dispatchedText": "🚨 *PANGGILAN BANTUAN TEKNIS SBM ITB*\n\nMohon bantuan di ruang Henk Uno SEGERA!\n\n🕒 Waktu: 26 Agu 2026, 14.50 WIB\n🆔 ID Tiket: #72-534"
+      }
+    }
+  },
+  {
+    "id": "TICK-MT9SFPPY-735",
+    "room": "Henk Uno",
+    "category": "Umum",
+    "notes": "",
+    "status": "Menunggu",
+    "createdAt": "2026-08-26T07:44:15.862Z",
+    "updatedAt": "2026-08-26T07:44:16.896Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "fonnte",
+      "timestamp": "2026-08-26T07:44:16.893Z",
+      "details": {
+        "success": true,
+        "provider": "fonnte",
+        "data": {
+          "detail": "success! message in queue",
+          "id": [
+            175280007
+          ],
+          "process": "pending",
+          "quota": {
+            "081380871850": {
+              "details": "deduced from total quota",
+              "quota": 996,
+              "remaining": 995,
+              "used": 1
+            }
+          },
+          "requestid": 672023313,
+          "status": true,
+          "target": [
+            "6287854277345"
+          ]
+        },
+        "dispatchedText": "🚨 *PANGGILAN BANTUAN TEKNIS SBM ITB*\n\nMohon bantuan di ruang Henk Uno SEGERA!\n\n🕒 Waktu: 26 Agu 2026, 14.44 WIB\n🆔 ID Tiket: #PY-735"
+      }
+    }
+  },
+  {
+    "id": "TICK-MT79TA8C-231",
+    "room": "Henk Uno",
+    "category": "Umum",
+    "notes": "",
+    "status": "Selesai",
+    "createdAt": "2026-08-24T13:27:23.916Z",
+    "updatedAt": "2026-08-24T13:34:55.518Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "fonnte",
+      "timestamp": "2026-08-24T13:27:24.143Z",
+      "details": {
+        "success": true,
+        "provider": "fonnte",
+        "data": {
+          "detail": "success! message in queue",
+          "id": [
+            175006537
+          ],
+          "process": "pending",
+          "quota": {
+            "081380871850": {
+              "details": "deduced from total quota",
+              "quota": 997,
+              "remaining": 996,
+              "used": 1
+            }
+          },
+          "requestid": 668071707,
+          "status": true,
+          "target": [
+            "6281380871850"
+          ]
+        },
+        "dispatchedText": "🚨 *PANGGILAN BANTUAN TEKNIS SBM ITB*\n\nMohon bantuan di ruang Henk Uno SEGERA!\n\n🕒 Waktu: 24 Agu 2026, 20.27 WIB\n🆔 ID Tiket: #8C-231"
+      }
+    }
+  },
+  {
+    "id": "TICK-MT79RBFY-820",
+    "room": "Kirana Megatara 1",
+    "category": "Umum",
+    "notes": "Minta bantuan Foto",
+    "status": "Selesai",
+    "createdAt": "2026-08-24T13:25:52.174Z",
+    "updatedAt": "2026-08-24T13:34:56.681Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "fonnte",
+      "timestamp": "2026-08-24T13:25:52.871Z",
+      "details": {
+        "success": true,
+        "provider": "fonnte",
+        "data": {
+          "detail": "success! message in queue",
+          "id": [
+            175006410
+          ],
+          "process": "pending",
+          "quota": {
+            "081380871850": {
+              "details": "deduced from total quota",
+              "quota": 998,
+              "remaining": 997,
+              "used": 1
+            }
+          },
+          "requestid": 668070164,
+          "status": true,
+          "target": [
+            "6281380871850"
+          ]
+        },
+        "dispatchedText": "🚨 *PANGGILAN BANTUAN TEKNIS SBM ITB*\n\nMohon bantuan teknis di ruang Kirana Megatara 1 SEGERA!\n\n📝 Info Tambahan: Minta bantuan Foto\n\n🕒 Waktu: 24 Agu 2026, 20.25 WIB\n🆔 ID Tiket: #FY-820"
+      }
+    }
+  },
+  {
+    "id": "TICK-MT77NK40-89",
+    "room": "Kirana Megatara 1",
+    "category": "Umum",
+    "notes": "",
+    "status": "Selesai",
+    "createdAt": "2026-08-24T12:26:57.552Z",
+    "updatedAt": "2026-08-24T12:39:46.250Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "fonnte",
+      "timestamp": "2026-08-24T12:26:58.585Z",
+      "details": {
+        "success": true,
+        "provider": "fonnte",
+        "data": {
+          "detail": "success! message in queue",
+          "id": [
+            175000380
+          ],
+          "process": "pending",
+          "quota": {
+            "081380871850": {
+              "details": "deduced from total quota",
+              "quota": 1000,
+              "remaining": 999,
+              "used": 1
+            }
+          },
+          "requestid": 668008025,
+          "status": true,
+          "target": [
+            "6281380871850"
+          ]
+        },
+        "dispatchedText": "🚨 *PANGGILAN BANTUAN TEKNIS SBM ITB*\n\nMohon bantuan teknis di ruang Kirana Megatara 1 SEGERA!\n\n🕒 Waktu: 24 Agu 2026, 19.26 WIB\n🆔 ID Tiket: #K40-89"
+      }
+    }
+  },
+  {
+    "id": "TICK-MT779RNP-174",
+    "room": "Henk Uno",
+    "category": "Umum",
+    "notes": "",
+    "status": "Selesai",
+    "createdAt": "2026-08-24T12:16:14.149Z",
+    "updatedAt": "2026-08-24T12:23:49.844Z",
+    "waStatus": {
+      "sent": false,
+      "provider": "fonnte",
+      "timestamp": "2026-08-24T12:16:14.730Z",
+      "details": {
+        "success": false,
+        "provider": "fonnte",
+        "error": "request invalid on disconnected device",
+        "data": {
+          "reason": "request invalid on disconnected device",
+          "requestid": 667997371,
+          "status": false
+        }
+      }
+    }
+  },
+  {
+    "id": "TICK-MT7798SK-282",
+    "room": "Henk Uno",
+    "category": "Umum",
+    "notes": "",
+    "status": "Selesai",
+    "createdAt": "2026-08-24T12:15:49.700Z",
+    "updatedAt": "2026-08-24T12:23:51.407Z",
+    "waStatus": {
+      "sent": false,
+      "provider": "fonnte",
+      "timestamp": "2026-08-24T12:15:50.254Z",
+      "details": {
+        "success": false,
+        "provider": "fonnte",
+        "error": "request invalid on disconnected device",
+        "data": {
+          "reason": "request invalid on disconnected device",
+          "requestid": 667996861,
+          "status": false
+        }
+      }
+    }
+  },
+  {
+    "id": "TICK-MT76XXS2-100",
+    "room": "Henk Uno",
+    "category": "Proyektor / Layar",
+    "notes": "Layar tidak menyala",
+    "status": "Selesai",
+    "createdAt": "2026-08-24T12:07:02.210Z",
+    "updatedAt": "2026-08-24T12:23:53.474Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "simulation",
+      "timestamp": "2026-08-24T12:07:02.336Z",
+      "details": {
+        "success": true,
+        "mode": "simulation",
+        "message": "Simulasi pesan berhasil (Token Fonnte belum dikonfigurasi).",
+        "dispatchedText": "🚨 *PANGGILAN BANTUAN TEKNIS SBM ITB*\n\nMohon bantuan teknis di ruang Henk Uno SEGERA!\n\n📌 Kendala: Proyektor / Layar\n📝 Info Tambahan: Layar tidak menyala\n\n🕒 Waktu: 24 Agu 2026, 19.07 WIB\n🆔 ID Tiket: #S2-100",
+        "recipients": []
+      }
+    }
+  }
+]

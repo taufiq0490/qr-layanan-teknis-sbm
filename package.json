@@ -1,0 +1,22 @@
+{
+  "name": "qr-layanan-teknis-sbm-itb",
+  "version": "1.0.0",
+  "description": "Sistem Panggilan Bantuan Teknis Ruang Kelas SBM ITB Jakarta berbasis QR Code dan WhatsApp Gateway",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "sbm-itb",
+    "qr-code",
+    "whatsapp-gateway",
+    "classroom-support"
+  ],
+  "author": "SBM ITB Jakarta",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}

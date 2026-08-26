@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Panggilan Bantuan Teknis - SBM ITB Jakarta</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .call-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px 20px;
+      box-shadow: 0 10px 30px rgba(15, 44, 89, 0.08);
+      border: 1px solid var(--border-color);
+      text-align: center;
+    }
+    .room-display {
+      background: linear-gradient(135deg, #0F2C59 0%, #1A4D8F 100%);
+      color: white;
+      padding: 14px 20px;
+      border-radius: 12px;
+      margin: 12px 0 20px;
+      box-shadow: 0 4px 12px rgba(15, 44, 89, 0.2);
+    }
+    .room-display .label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #DDA74F;
+      font-weight: 700;
+    }
+    .room-display .room-name {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-top: 4px;
+    }
+    .success-box {
+      display: none;
+      background: #ECFDF5;
+      border: 2px solid #10B981;
+      border-radius: 14px;
+      padding: 24px 16px;
+      text-align: center;
+      margin-top: 15px;
+      animation: fadeIn 0.4s ease-out;
+    }
+    .success-icon {
+      width: 64px;
+      height: 64px;
+      background: #10B981;
+      color: white;
+      font-size: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      margin: 0 auto 14px;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .privacy-badge {
+      font-size: 0.75rem;
+      color: #64748B;
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <span class="brand-badge">SBM ITB</span>
+      <div class="brand-text">
+        <h1>Layanan Teknis Kelas</h1>
+        <p>Kampus Jakarta</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="container-sm">
+    <div class="call-card" id="callCard">
+      
+      <!-- Room Indicator -->
+      <div class="room-display">
+        <div class="label">LOKASI RUANG KELAS</div>
+        <div class="room-name" id="displayRoomName">Memuat Ruangan...</div>
+      </div>
+
+      <!-- Main Emergency Call Button -->
+      <button class="btn btn-call-emergency" id="btnCallNow" type="button">
+        <span>🚨 PANGGIL BANTUAN SEGERA</span>
+      </button>
+
+      <!-- Optional Category Selector -->
+      <div style="margin-top: 24px; text-align: left;">
+        <p style="font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 8px;">
+          Pilih Jenis Kendala (Opsional):
+        </p>
+        <div class="category-grid" id="categoryGrid">
+          <div class="chip-option selected" data-category="Umum">
+            <span>⚡</span> Umum / Cepat
+          </div>
+          <div class="chip-option" data-category="Proyektor / Layar">
+            <span>📽️</span> Proyektor / Layar
+          </div>
+          <div class="chip-option" data-category="Mic / Sound Audio">
+            <span>🎤</span> Mic / Audio
+          </div>
+          <div class="chip-option" data-category="AC / Suhu Ruang">
+            <span>❄️</span> AC Ruangan
+          </div>
+          <div class="chip-option" data-category="Internet / Wi-Fi">
+            <span>🌐</span> Internet / Wi-Fi
+          </div>
+          <div class="chip-option" data-category="Listrik / Stop Kontak">
+            <span>🔌</span> Listrik / Pointer
+          </div>
+        </div>
+
+        <!-- Notes (Expandable) -->
+        <div class="form-group" style="margin-top: 12px;">
+          <input type="text" id="inputNotes" class="form-control" placeholder="Catatan singkat kendala (opsional)..." maxlength="120">
+        </div>
+      </div>
+
+      <!-- Privacy Notice -->
+      <div class="privacy-badge">
+        <span>🔒</span>
+        <span>Nomor kontak staf aman & terlindungi oleh sistem.</span>
+      </div>
+
+    </div>
+
+    <!-- Success Feedback View (Shown after sending) -->
+    <div class="success-box" id="successBox">
+      <div class="success-icon">✓</div>
+      <h2 style="color: #065F46; font-size: 1.35rem; margin-bottom: 8px;">Panggilan Bantuan Terkirim!</h2>
+      <p style="color: #047857; font-size: 0.95rem; line-height: 1.5; margin-bottom: 16px;">
+        Notifikasi bantuan untuk <strong><span id="confirmedRoomName"></span></strong> telah berhasil diteruskan ke WhatsApp Staf Teknis SBM ITB.
+      </p>
+      <div style="background: white; border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #475569; border: 1px solid #A7F3D0; margin-bottom: 16px;">
+        Staf bertugas sedang menuju ke lokasi ruangan Anda.
+      </div>
+      <button class="btn btn-outline" id="btnCallAgain" style="font-size: 0.85rem; padding: 8px 16px;">
+        Kirim Panggilan Tambahan
+      </button>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 SBM ITB Jakarta - Tim Dukungan Operasional & Teknis Perkuliahan</p>
+  </footer>
+
+  <script src="/js/call.js"></script>
+</body>
+</html>

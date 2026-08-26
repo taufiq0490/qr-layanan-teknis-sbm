@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cetak Kartu QR Ruangan - SBM ITB Jakarta</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/qrcode.min.js"></script>
+  <style>
+    .print-controls {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      box-shadow: var(--shadow);
+    }
+    .base-url-input-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      max-width: 450px;
+    }
+    .filter-room-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .qr-card-design {
+      background: white;
+      border: 3px solid #0F2C59;
+      border-radius: 18px;
+      padding: 24px 20px;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+      page-break-inside: avoid;
+      break-inside: avoid;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 440px;
+      position: relative;
+    }
+    .qr-card-actions {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px dashed #E2E8F0;
+    }
+    .btn-card-action {
+      flex: 1;
+      padding: 8px 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: #F8FAFC;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .btn-card-action:hover {
+      background: #0F2C59;
+      color: white;
+      border-color: #0F2C59;
+    }
+    .qr-header-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0F2C59;
+      letter-spacing: 0.5px;
+    }
+    .qr-header-subtitle {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #DDA74F;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .qr-room-tag {
+      background: #0F2C59;
+      color: white;
+      font-size: 1.25rem;
+      font-weight: 800;
+      padding: 8px 18px;
+      border-radius: 30px;
+      margin: 12px 0;
+      box-shadow: 0 4px 10px rgba(15, 44, 89, 0.25);
+    }
+    .qr-box {
+      background: #F8FAFC;
+      border: 1px dashed #94A3B8;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 6px 0;
+    }
+    .qr-instruction-bold {
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: #DC2626;
+      margin-top: 6px;
+      letter-spacing: 0.3px;
+    }
+    .qr-features-list {
+      font-size: 0.75rem;
+      color: #475569;
+      margin-top: 4px;
+      font-weight: 600;
+    }
+    .qr-footer-desc {
+      font-size: 0.7rem;
+      color: #64748B;
+      margin-top: 8px;
+      border-top: 1px solid #E2E8F0;
+      padding-top: 6px;
+      width: 100%;
+    }
+
+    /* Print Single Room Specific Style */
+    body.print-single-mode .qr-card-design {
+      display: none !important;
+    }
+    body.print-single-mode .qr-card-design.print-target-card {
+      display: flex !important;
+      margin: 40px auto !important;
+      max-width: 400px !important;
+      min-height: 520px !important;
+      border: 3px solid #000 !important;
+    }
+    body.print-single-mode .qr-card-actions {
+      display: none !important;
+    }
+
+    @media print {
+      body {
+        background: white !important;
+      }
+      .navbar, .btn, .no-print, .print-controls, .qr-card-actions {
+        display: none !important;
+      }
+      .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+      }
+      .print-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 15px !important;
+      }
+      body.print-single-mode .print-grid {
+        display: block !important;
+      }
+      body.print-single-mode .qr-card-design.print-target-card {
+        display: flex !important;
+        margin: 20px auto !important;
+        width: 80% !important;
+        max-width: 450px !important;
+      }
+      .qr-card-design {
+        box-shadow: none !important;
+        border: 2px solid #000 !important;
+        page-break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar no-print">
+    <div class="nav-brand">
+      <span class="brand-badge">SBM ITB</span>
+      <div class="brand-text">
+        <h1>Pusat Cetak QR Code</h1>
+        <p>Kampus Jakarta</p>
+      </div>
+    </div>
+    <nav class="nav-links">
+      <a href="/" class="nav-link">🏠 Portal Ruangan</a>
+      <a href="/admin/print-qr" class="nav-link active">🖨️ Cetak Kartu QR</a>
+      <a href="/admin" class="nav-link">📊 Dashboard</a>
+      <a href="/admin/settings" class="nav-link">⚙️ Pengaturan WA</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    
+    <!-- Controls (Hidden during print) -->
+    <div class="print-controls no-print">
+      <div>
+        <h3 style="font-size: 1.1rem; color: var(--primary); margin-bottom: 4px;">Pilihan Cetak Kartu QR Ruangan</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Anda dapat mencetak satu-satu per ruangan atau mencetak semua ruangan sekaligus.
+        </p>
+      </div>
+
+      <!-- Filter Selection -->
+      <div class="filter-room-group">
+        <label for="roomSelectFilter" style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Pilih Tampilan:</label>
+        <select id="roomSelectFilter" class="form-control" style="font-size: 0.9rem; font-weight: 600; width: auto; min-width: 200px;">
+          <option value="ALL">📋 Semua Ruangan (6 Kartu)</option>
+          <!-- Filled by JS -->
+        </select>
+      </div>
+
+      <div class="base-url-input-group">
+        <label for="baseUrlInput" style="font-size: 0.8rem; font-weight: 600; white-space: nowrap;">Domain / URL:</label>
+        <input type="text" id="baseUrlInput" class="form-control" style="font-size: 0.85rem;" placeholder="https://...">
+        <button class="btn btn-primary" id="btnUpdateQr" style="padding: 8px 12px; font-size: 0.85rem;">Update</button>
+        <a id="btnDirectOpenUrl" href="#" target="_blank" class="btn btn-outline" style="padding: 8px 12px; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;" title="Buka URL ini langsung di tab baru">🔗 Buka URL</a>
+      </div>
+
+      <div>
+        <button class="btn btn-gold" id="btnPrintCurrentView" style="font-size: 0.95rem; padding: 10px 18px;">
+          🖨️ Cetak Tampilan Ini (PDF)
+        </button>
+      </div>
+    </div>
+
+    <!-- Cards Grid -->
+    <div class="print-grid" id="qrCardsContainer">
+      <!-- Generated via JS -->
+    </div>
+
+  </main>
+
+  <footer class="footer no-print">
+    <p>© 2026 SBM ITB Jakarta - Tim Dukungan Operasional & Teknis Perkuliahan</p>
+  </footer>
+
+  <script src="/js/print-qr.js"></script>
+</body>
+</html>

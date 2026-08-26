@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Monitoring Tiket - SBM ITB Jakarta</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px 20px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .stat-number {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .filter-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn-group {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-filter {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: white;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-filter.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .action-btn-group {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-xs {
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      border: none;
+    }
+    .live-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background-color: var(--success);
+      border-radius: 50%;
+      margin-right: 6px;
+      animation: blink 1.5s infinite;
+    }
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0.3; }
+      100% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <span class="brand-badge">SBM ITB</span>
+      <div class="brand-text">
+        <h1>Dashboard Dukungan Teknis</h1>
+        <p>Kampus Jakarta</p>
+      </div>
+    </div>
+    <nav class="nav-links">
+      <a href="/" class="nav-link">🏠 Portal Ruangan</a>
+      <a href="/admin/print-qr" class="nav-link">🖨️ Cetak Kartu QR</a>
+      <a href="/admin" class="nav-link active">📊 Dashboard</a>
+      <a href="/admin/settings" class="nav-link">⚙️ Pengaturan WA</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    
+    <!-- Stats Row -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div>
+          <div class="stat-label">Menunggu Penanganan</div>
+          <div class="stat-number" style="color: #D97706;" id="statMenunggu">0</div>
+        </div>
+        <div style="font-size: 2rem;">⏳</div>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="stat-label">Sedang Diproses</div>
+          <div class="stat-number" style="color: #2563EB;" id="statDiproses">0</div>
+        </div>
+        <div style="font-size: 2rem;">🛠️</div>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="stat-label">Selesai Hari Ini</div>
+          <div class="stat-number" style="color: #059669;" id="statSelesai">0</div>
+        </div>
+        <div style="font-size: 2rem;">✅</div>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="stat-label">Total Laporan</div>
+          <div class="stat-number" id="statTotal">0</div>
+        </div>
+        <div style="font-size: 2rem;">📋</div>
+      </div>
+    </div>
+
+    <!-- Main Card with Table -->
+    <div class="card">
+      <div class="card-header">
+        <div style="display: flex; align-items: center;">
+          <span class="live-dot"></span>
+          <h2 class="card-title" style="margin: 0;">Monitoring Panggilan Kelas Masuk</h2>
+        </div>
+        <button class="btn btn-outline" id="btnRefresh" style="padding: 6px 12px; font-size: 0.85rem;">
+          🔄 Refresh Data
+        </button>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <div class="btn-group">
+          <button class="btn-filter active" data-filter="all">Semua Status</button>
+          <button class="btn-filter" data-filter="Menunggu">Menunggu</button>
+          <button class="btn-filter" data-filter="Diproses">Diproses</button>
+          <button class="btn-filter" data-filter="Selesai">Selesai</button>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);" id="lastUpdateTime">
+          Update otomatis setiap 5 detik
+        </div>
+      </div>
+
+      <!-- Table of Tickets -->
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Waktu</th>
+              <th>Lokasi Ruang</th>
+              <th>Kendala</th>
+              <th>Catatan</th>
+              <th>Status</th>
+              <th>Aksi Penanganan</th>
+            </tr>
+          </thead>
+          <tbody id="ticketsTableBody">
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                Memuat data panggilan tiket...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 SBM ITB Jakarta - Tim Dukungan Operasional & Teknis Perkuliahan</p>
+  </footer>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>
