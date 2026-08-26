@@ -116,7 +116,7 @@
     </div>
 
     <!-- KPI Summary Row -->
-    <div class="stats-grid">
+    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
       <div class="stat-card">
         <div>
           <div class="stat-label">Total Panggilan</div>
@@ -131,6 +131,14 @@
           <span style="font-size: 0.75rem; font-weight: 600; color: #059669;" id="kpiRate">0% rasio selesai</span>
         </div>
         <div style="font-size: 2rem;">✅</div>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="stat-label">Rata-rata Durasi Penanganan</div>
+          <div class="stat-number" style="color: #2563EB; font-size: 1.3rem;" id="kpiAvgDuration">-</div>
+          <span style="font-size: 0.75rem; color: var(--text-muted);" id="kpiAvgDurationSubtitle">dari tiket selesai</span>
+        </div>
+        <div style="font-size: 2rem;">⏱️</div>
       </div>
       <div class="stat-card">
         <div>
@@ -174,25 +182,25 @@
         </div>
       </div>
 
-      <!-- 3. Panggilan per Ruangan -->
+      <!-- 3. Beban per Ruangan -->
       <div class="chart-card">
         <div class="chart-card-header">
-          <h3 class="chart-card-title">🏢 Rekapitulasi per Ruangan</h3>
-          <span style="font-size: 0.75rem; color: var(--text-muted);">Frekuensi per Lokasi</span>
+          <h3 class="chart-card-title">📍 Frekuensi per Ruangan</h3>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Ruang Kelas Terbanyak Memanggil</span>
         </div>
         <div class="chart-container">
           <canvas id="chartRoom"></canvas>
         </div>
       </div>
 
-      <!-- 4. Status Penyelesaian -->
+      <!-- 4. Pola Jam Panggilan Masuk -->
       <div class="chart-card">
         <div class="chart-card-header">
-          <h3 class="chart-card-title">🎯 Status Penanganan Tiket</h3>
-          <span style="font-size: 0.75rem; color: var(--text-muted);">Komposisi Status</span>
+          <h3 class="chart-card-title">🕒 Distribusi Jam Perkuliahan</h3>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Jam Puncak Permintaan Bantuan</span>
         </div>
         <div class="chart-container">
-          <canvas id="chartStatus"></canvas>
+          <canvas id="chartHourly"></canvas>
         </div>
       </div>
     </div>
@@ -207,7 +215,7 @@
           </span>
         </div>
         <div class="no-print" style="display: flex; gap: 8px; align-items: center;">
-          <input type="text" id="tableSearch" placeholder="Cari ruangan/catatan..." class="filter-input" style="padding: 6px 10px; font-size: 0.85rem; width: 200px;">
+          <input type="text" id="tableSearch" placeholder="Cari ruangan/catatan/staf..." class="filter-input" style="padding: 6px 10px; font-size: 0.85rem; width: 220px;">
         </div>
       </div>
 
@@ -215,18 +223,19 @@
         <table class="table" id="reportTable">
           <thead>
             <tr>
-              <th style="width: 50px;">No</th>
-              <th>Waktu & Tanggal</th>
+              <th style="width: 40px;">No</th>
+              <th>Waktu Panggil</th>
+              <th>Waktu Selesai & Durasi</th>
               <th>Ruangan</th>
               <th>Kategori Kendala</th>
-              <th>Catatan / Keterangan</th>
+              <th>Petugas Support</th>
               <th>Status</th>
-              <th>Notifikasi WA</th>
+              <th>Catatan / Keterangan</th>
             </tr>
           </thead>
           <tbody id="reportTableBody">
             <tr>
-              <td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">
+              <td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">
                 Memuat data laporan...
               </td>
             </tr>

@@ -103,6 +103,7 @@ function createTicket(room, category = "Umum", notes = "") {
   const safeRoom = sanitizeString(room);
   const safeCategory = sanitizeString(category) || "Umum";
   const safeNotes = sanitizeString(notes);
+  const now = new Date().toISOString();
 
   const newTicket = {
     id: "TICK-" + Date.now().toString(36).toUpperCase() + "-" + Math.floor(Math.random() * 1000),
@@ -111,8 +112,11 @@ function createTicket(room, category = "Umum", notes = "") {
     notes: safeNotes,
     status: "Menunggu", // 'Menunggu', 'Diproses', 'Selesai'
     handledBy: "",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: now,
+    claimedAt: null,
+    completedAt: null,
+    resolutionTimeSeconds: null,
+    updatedAt: now,
     waStatus: {
       sent: false,
       timestamp: null,
@@ -128,11 +132,27 @@ function updateTicketStatus(id, status, handledBy = "") {
   const tickets = readTickets();
   const ticket = tickets.find(t => t.id === id);
   if (ticket) {
+    const now = new Date().toISOString();
     ticket.status = status;
-    ticket.updatedAt = new Date().toISOString();
-    if (handledBy !== undefined && handledBy !== null) {
+    ticket.updatedAt = now;
+
+    if (handledBy !== undefined && handledBy !== null && handledBy !== "") {
       ticket.handledBy = sanitizeString(handledBy);
     }
+
+    if (status === 'Diproses' && !ticket.claimedAt) {
+      ticket.claimedAt = now;
+    }
+
+    if (status === 'Selesai') {
+      if (!ticket.completedAt) {
+        ticket.completedAt = now;
+      }
+      const createdTime = new Date(ticket.createdAt).getTime();
+      const completedTime = new Date(ticket.completedAt).getTime();
+      ticket.resolutionTimeSeconds = Math.max(0, Math.round((completedTime - createdTime) / 1000));
+    }
+
     saveTickets(tickets);
     return ticket;
   }

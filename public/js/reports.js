@@ -245,15 +245,39 @@ function applyFilters() {
   updatePrintHeaderInfo();
 }
 
+function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return '< 1 mnt';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m === 0) return `${s} dtk`;
+  if (m < 60) return s > 0 ? `${m} mnt ${s} dtk` : `${m} mnt`;
+  const h = Math.floor(m / 60);
+  const remM = m % 60;
+  return remM > 0 ? `${h} jam ${remM} mnt` : `${h} jam`;
+}
+
 // 6. Update KPI Metrics
 function updateKPIs() {
   const total = filteredTickets.length;
-  const selesai = filteredTickets.filter(t => t.status === 'Selesai').length;
+  const completedTickets = filteredTickets.filter(t => t.status === 'Selesai');
+  const selesai = completedTickets.length;
   const rate = total > 0 ? Math.round((selesai / total) * 100) : 0;
 
   document.getElementById('kpiTotal').textContent = total;
   document.getElementById('kpiSelesai').textContent = selesai;
   document.getElementById('kpiRate').textContent = `${rate}% rasio selesai`;
+
+  // Average Resolution Duration
+  const ticketsWithDuration = completedTickets.filter(t => typeof t.resolutionTimeSeconds === 'number' && t.resolutionTimeSeconds > 0);
+  if (ticketsWithDuration.length > 0) {
+    const totalSecs = ticketsWithDuration.reduce((acc, t) => acc + t.resolutionTimeSeconds, 0);
+    const avgSecs = Math.round(totalSecs / ticketsWithDuration.length);
+    document.getElementById('kpiAvgDuration').textContent = `~ ${formatDuration(avgSecs)}`;
+    document.getElementById('kpiAvgDurationSubtitle').textContent = `dari ${ticketsWithDuration.length} tiket selesai`;
+  } else {
+    document.getElementById('kpiAvgDuration').textContent = '-';
+    document.getElementById('kpiAvgDurationSubtitle').textContent = 'belum ada data selesai';
+  }
 
   // Top Room
   const roomCounts = {};
@@ -468,7 +492,7 @@ function renderTable() {
   if (filteredTickets.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
+        <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
           Tidak ada data tiket yang cocok dengan filter yang dipilih.
         </td>
       </tr>
@@ -481,20 +505,24 @@ function renderTable() {
     const dateStr = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
     const timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
 
+    let completedInfo = '<span style="color: #94A3B8; font-size: 0.8rem;">-</span>';
+    if (t.completedAt) {
+      const compD = new Date(t.completedAt);
+      const compTimeStr = compD.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+      completedInfo = `
+        <div style="font-weight: 700; color: #059669; font-size: 0.85rem;">${compTimeStr}</div>
+        <div style="font-size: 0.75rem; color: #2563EB; font-weight: 600;">⏱️ ${formatDuration(t.resolutionTimeSeconds)}</div>
+      `;
+    }
+
     let badgeClass = 'badge-menunggu';
     if (t.status === 'Diproses') badgeClass = 'badge-diproses';
     if (t.status === 'Selesai') badgeClass = 'badge-selesai';
 
-    let waText = '<span style="color: #64748B;">-</span>';
-    if (t.waStatus && t.waStatus.sent) {
-      waText = `<span style="color: #059669; font-weight: 600; font-size: 0.8rem;">✓ Terkirim (${t.waStatus.provider || 'WA'})</span>`;
-    } else if (t.waStatus && t.waStatus.sent === false) {
-      waText = `<span style="color: #DC2626; font-size: 0.8rem;">✕ Gagal</span>`;
-    }
-
     const safeRoom = escapeHTML(t.room);
     const safeCategory = escapeHTML(t.category || 'Umum');
     const safeNotes = escapeHTML(t.notes);
+    const safeHandledBy = escapeHTML(t.handledBy || '-');
 
     return `
       <tr>
@@ -504,21 +532,26 @@ function renderTable() {
           <div style="font-size: 0.75rem; color: var(--text-muted);">${dateStr}</div>
         </td>
         <td>
+          ${completedInfo}
+        </td>
+        <td>
           <strong style="color: var(--primary);">📍 ${safeRoom}</strong>
         </td>
         <td>
           <span style="font-weight: 600;">${safeCategory}</span>
         </td>
         <td>
-          <span style="color: ${t.notes ? '#334155' : '#94A3B8'}; font-style: ${t.notes ? 'normal' : 'italic'}; font-size: 0.85rem;">
-            ${safeNotes || '-'}
+          <span style="font-weight: 600; color: #1E40AF;">
+            ${t.handledBy ? `👤 ${safeHandledBy}` : '<span style="color: #94A3B8;">-</span>'}
           </span>
         </td>
         <td>
           <span class="badge ${badgeClass}">${t.status}</span>
         </td>
         <td>
-          ${waText}
+          <span style="color: ${t.notes ? '#334155' : '#94A3B8'}; font-style: ${t.notes ? 'normal' : 'italic'}; font-size: 0.85rem;">
+            ${safeNotes || '-'}
+          </span>
         </td>
       </tr>
     `;
@@ -553,27 +586,33 @@ function exportToExcel() {
     return;
   }
 
-  const headers = ['No', 'ID Tiket', 'Tanggal', 'Jam', 'Ruangan', 'Kategori Kendala', 'Catatan Tambahan', 'Status Tiket', 'Notifikasi WhatsApp'];
+  const headers = ['No', 'ID Tiket', 'Tanggal Panggil', 'Jam Panggil', 'Waktu Selesai', 'Durasi Penanganan', 'Ruangan', 'Kategori Kendala', 'Petugas Support', 'Status Tiket', 'Catatan Tambahan'];
   
   const rows = filteredTickets.map((t, idx) => {
     const d = new Date(t.createdAt);
     const dateStr = d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     
-    let waStr = 'Tidak';
-    if (t.waStatus && t.waStatus.sent) waStr = `Terkirim (${t.waStatus.provider || 'WA'})`;
-    else if (t.waStatus && t.waStatus.sent === false) waStr = 'Gagal';
+    let compTimeStr = '-';
+    let durationStr = '-';
+    if (t.completedAt) {
+      const compD = new Date(t.completedAt);
+      compTimeStr = compD.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      durationStr = formatDuration(t.resolutionTimeSeconds);
+    }
 
     return [
       idx + 1,
       `"${t.id || ''}"`,
       `"${dateStr}"`,
       `"${timeStr}"`,
+      `"${compTimeStr}"`,
+      `"${durationStr}"`,
       `"${(t.room || '').replace(/"/g, '""')}"`,
       `"${(t.category || 'Umum').replace(/"/g, '""')}"`,
-      `"${(t.notes || '').replace(/"/g, '""')}"`,
+      `"${(t.handledBy || '-').replace(/"/g, '""')}"`,
       `"${t.status || ''}"`,
-      `"${waStr}"`
+      `"${(t.notes || '').replace(/"/g, '""')}"`
     ];
   });
 

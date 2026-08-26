@@ -93,6 +93,17 @@ async function loadTickets() {
   }
 }
 
+function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return '< 1 mnt';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m === 0) return `${s} dtk`;
+  if (m < 60) return s > 0 ? `${m} mnt ${s} dtk` : `${m} mnt`;
+  const h = Math.floor(m / 60);
+  const remM = m % 60;
+  return remM > 0 ? `${h} jam ${remM} mnt` : `${h} jam`;
+}
+
 function renderTable(tickets) {
   const tbody = document.getElementById('ticketsTableBody');
   
@@ -111,6 +122,13 @@ function renderTable(tickets) {
     const dateObj = new Date(ticket.createdAt);
     const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
     const dateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+
+    let completedTimeInfo = '';
+    if (ticket.completedAt) {
+      const compObj = new Date(ticket.completedAt);
+      const compTimeStr = compObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+      completedTimeInfo = `<div style="font-size: 0.72rem; color: #059669; margin-top: 2px;">Selesai: ${compTimeStr}</div>`;
+    }
 
     let badgeClass = 'badge-menunggu';
     if (ticket.status === 'Diproses') badgeClass = 'badge-diproses';
@@ -137,7 +155,11 @@ function renderTable(tickets) {
         </div>
       `;
     } else {
-      actionButtons = `<span style="font-size: 0.75rem; color: var(--text-muted);">Tiket Selesai</span>`;
+      actionButtons = `
+        <div style="font-size: 0.75rem; color: #059669; font-weight: 700;">
+          ⏱️ Selesai (${formatDuration(ticket.resolutionTimeSeconds)})
+        </div>
+      `;
     }
 
     const safeRoom = escapeHTML(ticket.room);
@@ -150,6 +172,7 @@ function renderTable(tickets) {
         <td style="white-space: nowrap;">
           <div style="font-weight: 700; color: var(--text-dark);">${timeStr}</div>
           <div style="font-size: 0.75rem; color: var(--text-muted);">${dateStr}</div>
+          ${completedTimeInfo}
         </td>
         <td>
           <div style="font-weight: 800; font-size: 1rem; color: var(--primary);">📍 ${safeRoom}</div>

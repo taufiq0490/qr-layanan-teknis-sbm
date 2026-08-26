@@ -103,9 +103,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       claimActionSection.style.display = 'none';
       inProgressSection.style.display = 'none';
       completedSection.style.display = 'block';
-      if (ticket.handledBy) {
-        completedHandlerText.textContent = `Ditangani oleh: ${ticket.handledBy}`;
+
+      let extraInfo = '';
+      if (ticket.completedAt) {
+        const compD = new Date(ticket.completedAt);
+        const compTime = compD.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+        const durSecs = ticket.resolutionTimeSeconds;
+        let durStr = '';
+        if (durSecs) {
+          const m = Math.floor(durSecs / 60);
+          const s = durSecs % 60;
+          durStr = m > 0 ? `${m} menit ${s} detik` : `${s} detik`;
+        }
+        extraInfo = `<br><span style="color: #059669; font-weight: 700; font-size: 0.85rem;">🕒 Waktu Selesai: ${compTime} ${durStr ? `(Durasi: ${durStr})` : ''}</span>`;
       }
+
+      completedHandlerText.innerHTML = (ticket.handledBy ? `Ditangani oleh: <strong>${escapeHTML(ticket.handledBy)}</strong>` : 'Kendala telah diselesaikan.') + extraInfo;
     }
     statusVal.innerHTML = badgeHtml;
   }

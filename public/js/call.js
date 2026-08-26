@@ -120,6 +120,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function formatDuration(seconds) {
+    if (!seconds || seconds <= 0) return '< 1 menit';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    if (m === 0) return `${s} detik`;
+    if (m < 60) return s > 0 ? `${m} menit ${s} detik` : `${m} menit`;
+    const h = Math.floor(m / 60);
+    const remM = m % 60;
+    return remM > 0 ? `${h} jam ${remM} menit` : `${h} jam`;
+  }
+
   function updateTrackingUI(ticket) {
     const status = ticket.status;
     const handler = ticket.handledBy || '';
@@ -134,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
       liveStatusCard.classList.add('state-menunggu');
       statusEmoji.textContent = '🟡';
       statusTitle.textContent = 'Menunggu Support...';
-      statusDesc.textContent = 'Panggilan bantuan telah terkirim ke WhatsApp tim teknis. Menunggu staf mengambil tiket.';
+      statusDesc.textContent = 'Panggilan bantuan telah terkirim ke tim support. Menunggu staf mengambil tiket.';
 
       step1.classList.add('active');
     } else if (status === 'Diproses') {
@@ -151,9 +162,18 @@ document.addEventListener('DOMContentLoaded', () => {
       liveStatusCard.classList.add('state-selesai');
       statusEmoji.textContent = '🟢';
       statusTitle.textContent = 'Kendala telah selesai ditangani';
-      statusDesc.textContent = handler 
-        ? `Bantuan teknis telah diselesaikan oleh ${handler}. Terima kasih telah menggunakan layanan teknis SBM ITB.`
-        : 'Bantuan teknis telah selesai dilaksanakan. Terima kasih.';
+
+      let timeInfo = '';
+      if (ticket.completedAt) {
+        const compD = new Date(ticket.completedAt);
+        const compTime = compD.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+        const durText = ticket.resolutionTimeSeconds ? ` (Durasi pengerjaan: ${formatDuration(ticket.resolutionTimeSeconds)})` : '';
+        timeInfo = `<div style="margin-top: 8px; font-weight: 700; color: #047857; font-size: 0.9rem;">🕒 Selesai pada: ${compTime}${durText}</div>`;
+      }
+
+      statusDesc.innerHTML = (handler 
+        ? `Bantuan teknis telah diselesaikan oleh <strong>${escapeHTML(handler)}</strong>. Terima kasih telah menggunakan layanan teknis SBM ITB.`
+        : 'Bantuan teknis telah selesai dilaksanakan. Terima kasih.') + timeInfo;
 
       step1.classList.add('completed');
       step2.classList.add('completed');

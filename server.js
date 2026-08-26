@@ -307,6 +307,9 @@ app.get('/api/tickets/:id', (req, res) => {
       status: ticket.status,
       handledBy: ticket.handledBy || "",
       createdAt: ticket.createdAt,
+      claimedAt: ticket.claimedAt || null,
+      completedAt: ticket.completedAt || null,
+      resolutionTimeSeconds: ticket.resolutionTimeSeconds || null,
       updatedAt: ticket.updatedAt
     }
   });
