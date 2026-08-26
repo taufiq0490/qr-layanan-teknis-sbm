@@ -170,4 +170,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Refresh Button
   document.getElementById('btnRefresh').addEventListener('click', loadTickets);
+
+  // Clear Tickets Button
+  const clearBtn = document.getElementById('btnClearTickets');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', async () => {
+      if (!confirm('Apakah Anda yakin ingin mengosongkan SELURUH data riwayat tiket? Tindakan ini tidak dapat dibatalkan.')) {
+        return;
+      }
+      try {
+        const res = await fetch('/api/admin/clear-tickets', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          alert('Riwayat tiket berhasil dikosongkan.');
+          loadTickets();
+        } else {
+          alert('Gagal mengosongkan tiket: ' + data.error);
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Terjadi kesalahan saat mengosongkan riwayat tiket.');
+      }
+    });
+  }
 });

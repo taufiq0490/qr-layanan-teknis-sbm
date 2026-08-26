@@ -5,9 +5,11 @@ const {
   readConfig,
   saveConfig,
   readTickets,
+  saveTickets,
   createTicket,
   updateTicketStatus,
-  updateTicketWaStatus
+  updateTicketWaStatus,
+  clearAllTickets
 } = require('./services/storage');
 const { sendClassroomAlert } = require('./services/waGateway');
 
@@ -153,6 +155,17 @@ app.patch('/api/tickets/:id/status', (req, res) => {
   res.json({ success: true, ticket: updatedTicket });
 });
 
+// 4.1 Clear all tickets (Admin action)
+app.post('/api/admin/clear-tickets', (req, res) => {
+  try {
+    clearAllTickets();
+    res.json({ success: true, message: 'Seluruh riwayat tiket berhasil dikosongkan.' });
+  } catch (err) {
+    console.error('Error clearing tickets:', err);
+    res.status(500).json({ success: false, error: 'Gagal mengosongkan riwayat tiket.' });
+  }
+});
+
 // 5. Get Settings (Admin)
 app.get('/api/admin/settings', (req, res) => {
   const config = readConfig();
@@ -223,6 +236,9 @@ app.get('/admin/print-qr', (req, res) => {
 app.get('/admin/settings', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'settings.html'));
 });
+app.get(['/admin/reports', '/reports'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reports.html'));
+});
 
 // Start Server if run directly
 if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
@@ -233,6 +249,7 @@ if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
     console.log(`📱 Call URL     : http://localhost:${PORT}/call?room=Henk%20Uno`);
     console.log(`🖨️  Print QR Card: http://localhost:${PORT}/admin/print-qr`);
     console.log(`🛠️  Admin Panel  : http://localhost:${PORT}/admin`);
+    console.log(`📈  Reports      : http://localhost:${PORT}/admin/reports`);
     console.log(`⚙️  WA Settings  : http://localhost:${PORT}/admin/settings`);
     console.log(`=======================================================`);
   });

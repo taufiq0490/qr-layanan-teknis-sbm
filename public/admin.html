@@ -101,6 +101,7 @@
       <a href="/" class="nav-link">🏠 Portal Ruangan</a>
       <a href="/admin/print-qr" class="nav-link">🖨️ Cetak Kartu QR</a>
       <a href="/admin" class="nav-link active">📊 Dashboard</a>
+      <a href="/admin/reports" class="nav-link">📈 Laporan & Grafik</a>
       <a href="/admin/settings" class="nav-link">⚙️ Pengaturan WA</a>
     </nav>
   </header>
@@ -146,9 +147,14 @@
           <span class="live-dot"></span>
           <h2 class="card-title" style="margin: 0;">Monitoring Panggilan Kelas Masuk</h2>
         </div>
-        <button class="btn btn-outline" id="btnRefresh" style="padding: 6px 12px; font-size: 0.85rem;">
-          🔄 Refresh Data
-        </button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-outline" id="btnRefresh" style="padding: 6px 12px; font-size: 0.85rem;">
+            🔄 Refresh Data
+          </button>
+          <button class="btn btn-outline" id="btnClearTickets" style="padding: 6px 12px; font-size: 0.85rem; color: #DC2626; border-color: #FCA5A5;">
+            🗑️ Kosongkan Riwayat
+          </button>
+        </div>
       </div>
 
       <!-- Filters -->

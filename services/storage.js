@@ -137,6 +137,12 @@ function updateTicketWaStatus(id, waStatus) {
   return null;
 }
 
+function clearAllTickets() {
+  inMemoryTickets = [];
+  saveTickets([]);
+  return true;
+}
+
 module.exports = {
   readConfig,
   saveConfig,
@@ -144,5 +150,6 @@ module.exports = {
   saveTickets,
   createTicket,
   updateTicketStatus,
-  updateTicketWaStatus
+  updateTicketWaStatus,
+  clearAllTickets
 };

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporan & Analitik Dukungan Teknis - SBM ITB Jakarta</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Chart.js CDN for interactive visual charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Navbar (Hidden on print) -->
+  <header class="navbar no-print">
+    <div class="nav-brand">
+      <span class="brand-badge">SBM ITB</span>
+      <div class="brand-text">
+        <h1>Laporan & Statistik Layanan Teknis</h1>
+        <p>Kampus Jakarta</p>
+      </div>
+    </div>
+    <nav class="nav-links">
+      <a href="/" class="nav-link">🏠 Portal Ruangan</a>
+      <a href="/admin/print-qr" class="nav-link">🖨️ Cetak Kartu QR</a>
+      <a href="/admin" class="nav-link">📊 Dashboard</a>
+      <a href="/admin/reports" class="nav-link active">📈 Laporan & Grafik</a>
+      <a href="/admin/settings" class="nav-link">⚙️ Pengaturan WA</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    
+    <!-- Official Print Header (Visible during Print / PDF Export) -->
+    <div class="official-print-header">
+      <div class="kop-title">SEKOLAH BISNIS DAN MANAJEMEN - INSTITUT TEKNOLOGI BANDUNG</div>
+      <div class="kop-sub">Kampus Jakarta • Laporan Rekapitulasi & Statistik Panggilan Dukungan Teknis Kelas</div>
+      <div class="kop-meta">
+        <span id="printReportPeriod">Periode Laporan: Semua Data</span>
+        <span id="printGeneratedDate">Dicetak pada: -</span>
+      </div>
+    </div>
+
+    <!-- Header Actions (No print) -->
+    <div class="reports-header no-print">
+      <div>
+        <h2 style="font-size: 1.5rem; color: var(--primary); font-weight: 800; margin-bottom: 4px;">
+          📈 Rekapitulasi & Analitik Layanan Teknis
+        </h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+          Analisis frekuensi kendala, performa penanganan, dan ekspor laporan berkala.
+        </p>
+      </div>
+      <div class="export-actions">
+        <button class="btn btn-outline" id="btnExportExcel" style="background: white; border-color: #059669; color: #059669; font-weight: 700;">
+          📑 Unduh Excel / CSV
+        </button>
+        <button class="btn btn-primary" id="btnExportPDF" style="font-weight: 700;">
+          📄 Cetak / Ekspor PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter Box (No print) -->
+    <div class="filter-box no-print">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+        <span style="font-size: 0.95rem; font-weight: 700; color: var(--primary);">
+          🔍 Filter Periode & Kriteria Laporan
+        </span>
+        <!-- Quick Preset Buttons -->
+        <div class="btn-group">
+          <button class="btn-filter active" data-period="all">Semua</button>
+          <button class="btn-filter" data-period="today">Hari Ini</button>
+          <button class="btn-filter" data-period="7days">7 Hari Terakhir</button>
+          <button class="btn-filter" data-period="30days">30 Hari Terakhir</button>
+          <button class="btn-filter" data-period="thismonth">Bulan Ini</button>
+        </div>
+      </div>
+
+      <div class="filter-grid">
+        <div class="filter-item">
+          <label for="startDate">Dari Tanggal</label>
+          <input type="date" id="startDate" class="filter-input">
+        </div>
+        <div class="filter-item">
+          <label for="endDate">Sampai Tanggal</label>
+          <input type="date" id="endDate" class="filter-input">
+        </div>
+        <div class="filter-item">
+          <label for="filterRoom">Ruangan</label>
+          <select id="filterRoom" class="filter-input">
+            <option value="all">Semua Ruangan</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label for="filterCategory">Kategori Kendala</label>
+          <select id="filterCategory" class="filter-input">
+            <option value="all">Semua Kategori</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label for="filterStatus">Status Tiket</label>
+          <select id="filterStatus" class="filter-input">
+            <option value="all">Semua Status</option>
+            <option value="Selesai">Selesai</option>
+            <option value="Diproses">Diproses</option>
+            <option value="Menunggu">Menunggu</option>
+          </select>
+        </div>
+        <div class="filter-item" style="justify-content: flex-end;">
+          <button class="btn btn-outline" id="btnResetFilter" style="padding: 8px 12px; font-size: 0.85rem; height: 38px;">
+            🔄 Reset Filter
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI Summary Row -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div>
+          <div class="stat-label">Total Panggilan</div>
+          <div class="stat-number" id="kpiTotal">0</div>
+        </div>
+        <div style="font-size: 2rem;">📋</div>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="stat-label">Terselesaikan</div>
+          <div class="stat-number" style="color: #059669;" id="kpiSelesai">0</div>
+          <span style="font-size: 0.75rem; font-weight: 600; color: #059669;" id="kpiRate">0% rasio selesai</span>
+        </div>
+        <div style="font-size: 2rem;">✅</div>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="stat-label">Ruangan Teraktif</div>
+          <div class="stat-number" style="font-size: 1.3rem; color: var(--primary);" id="kpiTopRoom">-</div>
+          <span style="font-size: 0.75rem; color: var(--text-muted);" id="kpiTopRoomCount">0 panggilan</span>
+        </div>
+        <div style="font-size: 2rem;">📍</div>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="stat-label">Kendala Terbanyak</div>
+          <div class="stat-number" style="font-size: 1.3rem; color: #D97706;" id="kpiTopCategory">-</div>
+          <span style="font-size: 0.75rem; color: var(--text-muted);" id="kpiTopCategoryCount">0 laporan</span>
+        </div>
+        <div style="font-size: 2rem;">⚠️</div>
+      </div>
+    </div>
+
+    <!-- Visual Charts Grid (2x2) -->
+    <div class="charts-grid">
+      <!-- 1. Tren Panggilan -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h3 class="chart-card-title">📈 Tren Frekuensi Panggilan</h3>
+          <span style="font-size: 0.75rem; color: var(--text-muted);" id="timelineSubtitle">Panggilan per Hari</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartTimeline"></canvas>
+        </div>
+      </div>
+
+      <!-- 2. Distribusi Kategori Kendala -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h3 class="chart-card-title">🍩 Distribusi Kategori Kendala</h3>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Persentase Jenis Masalah</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartCategory"></canvas>
+        </div>
+      </div>
+
+      <!-- 3. Panggilan per Ruangan -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h3 class="chart-card-title">🏢 Rekapitulasi per Ruangan</h3>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Frekuensi per Lokasi</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartRoom"></canvas>
+        </div>
+      </div>
+
+      <!-- 4. Status Penyelesaian -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h3 class="chart-card-title">🎯 Status Penanganan Tiket</h3>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Komposisi Status</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartStatus"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detailed Data Table -->
+    <div class="card" style="margin-bottom: 30px;">
+      <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
+        <div>
+          <h2 class="card-title" style="margin: 0;">📋 Rincian Data Tiket Masuk</h2>
+          <span style="font-size: 0.8rem; color: var(--text-muted);" id="tableSummaryText">
+            Menampilkan 0 data tiket
+          </span>
+        </div>
+        <div class="no-print" style="display: flex; gap: 8px; align-items: center;">
+          <input type="text" id="tableSearch" placeholder="Cari ruangan/catatan..." class="filter-input" style="padding: 6px 10px; font-size: 0.85rem; width: 200px;">
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table" id="reportTable">
+          <thead>
+            <tr>
+              <th style="width: 50px;">No</th>
+              <th>Waktu & Tanggal</th>
+              <th>Ruangan</th>
+              <th>Kategori Kendala</th>
+              <th>Catatan / Keterangan</th>
+              <th>Status</th>
+              <th>Notifikasi WA</th>
+            </tr>
+          </thead>
+          <tbody id="reportTableBody">
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                Memuat data laporan...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="footer no-print">
+    <p>© 2026 SBM ITB Jakarta - Tim Dukungan Operasional & Teknis Perkuliahan</p>
+  </footer>
+
+  <script src="/js/reports.js"></script>
+</body>
+</html>
