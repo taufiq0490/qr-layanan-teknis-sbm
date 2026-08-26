@@ -17,6 +17,7 @@ function getAuthHeaders() {
 
 let currentFilter = 'all';
 let previousTicketCount = null;
+let lastRenderedKey = '';
 
 // Sound notification using Web Audio API (no external asset needed)
 function playBeep() {
@@ -84,7 +85,12 @@ async function loadTickets() {
       displayTickets = tickets.filter(t => t.status.toLowerCase() === currentFilter.toLowerCase());
     }
 
-    renderTable(displayTickets);
+    // Smart Render: only re-render if data has changed to keep UI ultra-smooth
+    const currentKey = currentFilter + '_' + JSON.stringify(displayTickets.map(t => [t.id, t.status, t.handledBy, t.updatedAt]));
+    if (currentKey !== lastRenderedKey) {
+      lastRenderedKey = currentKey;
+      renderTable(displayTickets);
+    }
     
     const now = new Date();
     document.getElementById('lastUpdateTime').textContent = 'Terakhir diperbarui: ' + now.toLocaleTimeString('id-ID');
@@ -236,8 +242,8 @@ async function updateStatus(ticketId, newStatus, handledBy = "") {
 document.addEventListener('DOMContentLoaded', () => {
   loadTickets();
 
-  // Polling interval 5 detik
-  setInterval(loadTickets, 5000);
+  // Fast real-time polling interval (2.5 detik)
+  setInterval(loadTickets, 2500);
 
   // Filter Buttons
   const filterBtns = document.querySelectorAll('.btn-filter');

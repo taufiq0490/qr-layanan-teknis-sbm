@@ -15,7 +15,7 @@ const {
   sanitizeString
 } = require('./services/storage');
 const { sendClassroomAlert } = require('./services/waGateway');
-const { sendTelegramAlert } = require('./services/telegramGateway');
+const { sendTelegramAlert, sendTelegramStatusUpdate } = require('./services/telegramGateway');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -216,6 +216,33 @@ app.post('/api/tunnel-url', (req, res) => {
   res.json({ success: true, publicTunnelUrl });
 });
 
+// 2.0 Get Remaining Call Quota for Current Room & IP
+app.get('/api/call-quota', (req, res) => {
+  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+  const room = (req.query && req.query.room) ? req.query.room.trim().toLowerCase() : 'unknown';
+  const key = `${clientIp}_${room}`;
+  const now = Date.now();
+
+  let timestamps = callHistory.get(key) || [];
+  timestamps = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW_MS);
+  
+  const usedCalls = timestamps.length;
+  const remainingCalls = Math.max(0, MAX_CALLS_PER_WINDOW - usedCalls);
+  let resetInSeconds = 0;
+  if (timestamps.length > 0) {
+    resetInSeconds = Math.max(0, Math.ceil((RATE_LIMIT_WINDOW_MS - (now - timestamps[0])) / 1000));
+  }
+
+  res.json({
+    success: true,
+    maxCalls: MAX_CALLS_PER_WINDOW,
+    windowMinutes: 2,
+    usedCalls,
+    remainingCalls,
+    resetInSeconds
+  });
+});
+
 // 2. Trigger Technical Call from Room (Protected with Rate Limit)
 app.post('/api/call', callRateLimiter, async (req, res) => {
   try {
@@ -315,8 +342,8 @@ app.get('/api/tickets/:id', (req, res) => {
   });
 });
 
-// 3.1 Quick Claim Ticket by Support Staff (via WhatsApp Quick Action Link)
-app.post('/api/tickets/:id/claim', (req, res) => {
+// 3.1 Quick Claim Ticket by Support Staff (via WhatsApp/Telegram Quick Action Link)
+app.post('/api/tickets/:id/claim', async (req, res) => {
   const { id } = req.params;
   const { staffName } = req.body;
 
@@ -331,6 +358,13 @@ app.post('/api/tickets/:id/claim', (req, res) => {
     return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan.' });
   }
 
+  // Broadcast status update to Telegram group in background
+  sendTelegramStatusUpdate({
+    ticket: updatedTicket,
+    newStatus: 'Diproses',
+    handledBy: safeStaffName
+  }).catch(e => console.error('Telegram broadcast error:', e));
+
   res.json({
     success: true,
     message: `Tiket berhasil diambil oleh ${safeStaffName}. Status diubah menjadi "Diproses".`,
@@ -339,7 +373,7 @@ app.post('/api/tickets/:id/claim', (req, res) => {
 });
 
 // 3.2 Quick Complete Ticket by Support Staff
-app.post('/api/tickets/:id/complete', (req, res) => {
+app.post('/api/tickets/:id/complete', async (req, res) => {
   const { id } = req.params;
   const { staffName } = req.body;
   const safeStaffName = staffName ? sanitizeString(staffName.trim()) : undefined;
@@ -348,6 +382,13 @@ app.post('/api/tickets/:id/complete', (req, res) => {
   if (!updatedTicket) {
     return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan.' });
   }
+
+  // Broadcast completion update to Telegram group in background
+  sendTelegramStatusUpdate({
+    ticket: updatedTicket,
+    newStatus: 'Selesai',
+    handledBy: updatedTicket.handledBy
+  }).catch(e => console.error('Telegram broadcast error:', e));
 
   res.json({
     success: true,
@@ -373,7 +414,7 @@ app.get('/api/tickets', requireAdminAuthAPI, (req, res) => {
 });
 
 // 5. Update Ticket Status (Admin - Protected)
-app.patch('/api/tickets/:id/status', requireAdminAuthAPI, (req, res) => {
+app.patch('/api/tickets/:id/status', requireAdminAuthAPI, async (req, res) => {
   const { id } = req.params;
   const { status, handledBy } = req.body;
 
@@ -384,6 +425,15 @@ app.patch('/api/tickets/:id/status', requireAdminAuthAPI, (req, res) => {
   const updatedTicket = updateTicketStatus(id, status, handledBy);
   if (!updatedTicket) {
     return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan' });
+  }
+
+  // Broadcast status update to Telegram group in background
+  if (['Diproses', 'Selesai'].includes(status)) {
+    sendTelegramStatusUpdate({
+      ticket: updatedTicket,
+      newStatus: status,
+      handledBy: updatedTicket.handledBy
+    }).catch(e => console.error('Telegram broadcast error:', e));
   }
 
   res.json({ success: true, ticket: updatedTicket });

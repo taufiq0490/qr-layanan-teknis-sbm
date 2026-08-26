@@ -35,6 +35,36 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeTicketId = null;
   let pollInterval = null;
 
+  const rateLimitText = document.getElementById('rateLimitText');
+  const rateLimitBadge = document.getElementById('rateLimitBadge');
+
+  // Load and display remaining quota
+  async function updateQuotaDisplay() {
+    try {
+      const res = await fetch(`/api/call-quota?room=${encodeURIComponent(roomParam)}`);
+      const data = await res.json();
+      if (data.success) {
+        const rem = data.remainingCalls;
+        const max = data.maxCalls || 3;
+        if (rem === max) {
+          rateLimitText.textContent = `Sisa kuota panggilan: ${rem} dari ${max} kali (dalam 2 menit)`;
+          if (rateLimitBadge) rateLimitBadge.style.borderColor = '#CBD5E1';
+        } else if (rem > 0) {
+          rateLimitText.textContent = `Sisa kuota panggilan: ${rem} dari ${max} kali (reset dlm ${data.resetInSeconds} dtk)`;
+          if (rateLimitBadge) rateLimitBadge.style.borderColor = '#F59E0B';
+        } else {
+          rateLimitText.textContent = `Batas panggilan tercapai (0/${max}). Silakan tunggu ${data.resetInSeconds} detik`;
+          if (rateLimitBadge) rateLimitBadge.style.borderColor = '#EF4444';
+        }
+      }
+    } catch (e) {
+      if (rateLimitText) rateLimitText.textContent = 'Batas panggilan: Maks. 3 kali per 2 menit';
+    }
+  }
+
+  updateQuotaDisplay();
+  const quotaInterval = setInterval(updateQuotaDisplay, 5000);
+
   // Set room name display safely
   displayRoomName.textContent = roomParam;
   if (trackingRoomName) trackingRoomName.textContent = roomParam;
@@ -71,20 +101,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (response.status === 429) {
         alert('⏱️ ' + (data.error || 'Batas panggilan tercapai. Mohon tunggu sejenak.'));
+        updateQuotaDisplay();
         resetButton();
         return;
       }
 
       if (data.success && data.ticket) {
         activeTicketId = data.ticket.id;
+        updateQuotaDisplay();
         showTrackingView(data.ticket);
       } else {
         alert('Gagal mengirim panggilan: ' + (data.error || 'Terjadi kesalahan'));
+        updateQuotaDisplay();
         resetButton();
       }
     } catch (err) {
       console.error('Call error:', err);
       alert('Koneksi bermasalah. Pastikan jaringan internet/Wi-Fi Anda aktif.');
+      updateQuotaDisplay();
       resetButton();
     }
   });
