@@ -103,6 +103,7 @@
       <a href="/admin" class="nav-link active">📊 Dashboard</a>
       <a href="/admin/reports" class="nav-link">📈 Laporan & Grafik</a>
       <a href="/admin/settings" class="nav-link">⚙️ Pengaturan WA</a>
+      <a href="javascript:void(0)" onclick="handleLogout()" class="nav-link" style="color: #FCA5A5;">🚪 Logout</a>
     </nav>
   </header>
 
@@ -179,13 +180,14 @@
               <th>Lokasi Ruang</th>
               <th>Kendala</th>
               <th>Catatan</th>
+              <th>Petugas Support</th>
               <th>Status</th>
               <th>Aksi Penanganan</th>
             </tr>
           </thead>
           <tbody id="ticketsTableBody">
             <tr>
-              <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
+              <td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">
                 Memuat data panggilan tiket...
               </td>
             </tr>

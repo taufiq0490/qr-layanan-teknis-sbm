@@ -38,11 +38,14 @@ async function sendClassroomAlert({ room, category, notes, ticketId }) {
   const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }) + " WIB";
   const dateStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' });
   
+  const claimBaseUrl = config.claimBaseUrl || "https://qr-layanan-teknis-sbm.vercel.app";
+  const claimUrl = `${claimBaseUrl}/claim?ticket=${encodeURIComponent(ticketId)}`;
+
   let fullMessage = `🚨 *PANGGILAN BANTUAN TEKNIS SBM ITB*\n\n${message}\n`;
   if (extraDetails.length > 0) {
     fullMessage += `\n${extraDetails.join('\n')}\n`;
   }
-  fullMessage += `\n🕒 Waktu: ${dateStr}, ${timeStr}\n🆔 ID Tiket: #${ticketId.slice(-6)}`;
+  fullMessage += `\n🕒 Waktu: ${dateStr}, ${timeStr}\n🆔 ID Tiket: #${ticketId.slice(-6)}\n\n👉 *Klaim Tugas Cepat:* ${claimUrl}`;
 
   console.log(`[WA Gateway] Sending alert for Room "${room}"...`);
 

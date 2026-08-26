@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Admin - QR Layanan Teknis SBM ITB</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .login-container {
+      max-width: 420px;
+      margin: 60px auto;
+      padding: 0 1rem;
+    }
+    .login-card {
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 2.5rem 2rem;
+      border: 1px solid var(--border-color);
+      text-align: center;
+    }
+    .login-header {
+      margin-bottom: 1.8rem;
+    }
+    .login-header .logo-badge {
+      display: inline-block;
+      background: var(--primary);
+      color: var(--secondary);
+      font-size: 2rem;
+      width: 64px;
+      height: 64px;
+      line-height: 64px;
+      border-radius: 50%;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 10px rgba(15, 44, 89, 0.2);
+    }
+    .login-header h2 {
+      color: var(--primary);
+      font-size: 1.4rem;
+      margin-bottom: 0.3rem;
+    }
+    .login-header p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .form-group {
+      text-align: left;
+      margin-bottom: 1.2rem;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.4rem;
+      color: var(--text-dark);
+    }
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    }
+    .btn-login {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-login:hover {
+      background: var(--primary-light);
+    }
+    .btn-login:active {
+      transform: scale(0.98);
+    }
+    .alert-error {
+      background: #FEE2E2;
+      color: #991B1B;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 1.2rem;
+      display: none;
+      text-align: left;
+    }
+    .back-home {
+      display: inline-block;
+      margin-top: 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+    .back-home:hover {
+      color: var(--primary);
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="navbar">
+    <a href="/" class="nav-brand">
+      <span class="brand-badge">SBM ITB</span>
+      <div class="brand-text">
+        <h1>Layanan Teknis Ruang Kelas</h1>
+        <p>Kampus Jakarta</p>
+      </div>
+    </a>
+  </header>
+
+  <main class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo-badge">🔐</div>
+        <h2>Portal Admin SBM ITB</h2>
+        <p>Masukkan kata sandi untuk mengakses dashboard</p>
+      </div>
+
+      <div id="errorAlert" class="alert-error"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="password">Kata Sandi Admin</label>
+          <input type="password" id="password" class="form-input" placeholder="Masukkan kata sandi..." required autofocus autocomplete="current-password">
+        </div>
+
+        <button type="submit" id="btnLogin" class="btn-login">
+          Masuk ke Dashboard ➔
+        </button>
+      </form>
+
+      <a href="/" class="back-home">← Kembali ke Halaman Utama</a>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const loginForm = document.getElementById('loginForm');
+      const passwordInput = document.getElementById('password');
+      const errorAlert = document.getElementById('errorAlert');
+      const btnLogin = document.getElementById('btnLogin');
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectUrl = urlParams.get('redirect') || '/admin';
+
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const password = passwordInput.value;
+        if (!password) return;
+
+        btnLogin.disabled = true;
+        btnLogin.textContent = 'Memverifikasi...';
+        errorAlert.style.display = 'none';
+
+        try {
+          const res = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            if (data.token) {
+              localStorage.setItem('admin_token', data.token);
+            }
+            window.location.href = decodeURIComponent(redirectUrl);
+          } else {
+            errorAlert.textContent = '❌ ' + (data.error || 'Kata sandi salah.');
+            errorAlert.style.display = 'block';
+            btnLogin.disabled = false;
+            btnLogin.textContent = 'Masuk ke Dashboard ➔';
+            passwordInput.focus();
+          }
+        } catch (err) {
+          console.error(err);
+          errorAlert.textContent = '❌ Terjadi kesalahan jaringan. Silakan coba lagi.';
+          errorAlert.style.display = 'block';
+          btnLogin.disabled = false;
+          btnLogin.textContent = 'Masuk ke Dashboard ➔';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,1 +1,122 @@
-[]
+[
+  {
+    "id": "TICK-MTA9LFUK-376",
+    "room": "Kirana Megatara 1",
+    "category": "AC",
+    "notes": "Test call 3",
+    "status": "Menunggu",
+    "handledBy": "",
+    "createdAt": "2026-08-26T15:44:36.476Z",
+    "updatedAt": "2026-08-26T15:44:36.513Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "fonnte",
+      "timestamp": "2026-08-26T15:44:36.513Z",
+      "details": {
+        "success": true,
+        "provider": "fonnte",
+        "data": {
+          "detail": "success! message in queue",
+          "id": [
+            175344553
+          ],
+          "process": "pending",
+          "quota": {
+            "081380871850": {
+              "details": "deduced from total quota",
+              "quota": 989,
+              "remaining": 988,
+              "used": 1
+            }
+          },
+          "requestid": 672695015,
+          "status": true,
+          "target": [
+            "6287854277345"
+          ]
+        },
+        "dispatchedText": "🚨 *PANGGILAN BANTUAN TEKNIS SBM ITB*\n\nMohon bantuan di ruang Kirana Megatara 1 SEGERA!\n\n📌 Kendala: AC\n📝 Info Tambahan: Test call 3\n\n🕒 Waktu: 26 Agu 2026, 22.44 WIB\n🆔 ID Tiket: #UK-376\n\n👉 *Klaim Tugas Cepat:* https://qr-layanan-teknis-sbm.vercel.app/claim?ticket=TICK-MTA9LFUK-376"
+      }
+    }
+  },
+  {
+    "id": "TICK-MTA9LFTK-943",
+    "room": "Kirana Megatara 1",
+    "category": "Audio",
+    "notes": "Test call 2",
+    "status": "Menunggu",
+    "handledBy": "",
+    "createdAt": "2026-08-26T15:44:36.440Z",
+    "updatedAt": "2026-08-26T15:44:36.474Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "fonnte",
+      "timestamp": "2026-08-26T15:44:36.474Z",
+      "details": {
+        "success": true,
+        "provider": "fonnte",
+        "data": {
+          "detail": "success! message in queue",
+          "id": [
+            175344552
+          ],
+          "process": "pending",
+          "quota": {
+            "081380871850": {
+              "details": "deduced from total quota",
+              "quota": 990,
+              "remaining": 989,
+              "used": 1
+            }
+          },
+          "requestid": 672695014,
+          "status": true,
+          "target": [
+            "6287854277345"
+          ]
+        },
+        "dispatchedText": "🚨 *PANGGILAN BANTUAN TEKNIS SBM ITB*\n\nMohon bantuan di ruang Kirana Megatara 1 SEGERA!\n\n📌 Kendala: Audio\n📝 Info Tambahan: Test call 2\n\n🕒 Waktu: 26 Agu 2026, 22.44 WIB\n🆔 ID Tiket: #TK-943\n\n👉 *Klaim Tugas Cepat:* https://qr-layanan-teknis-sbm.vercel.app/claim?ticket=TICK-MTA9LFTK-943"
+      }
+    }
+  },
+  {
+    "id": "TICK-MTA9LFLC-673",
+    "room": "Kirana Megatara 1",
+    "category": "Proyektor",
+    "notes": "Test call 1",
+    "status": "Selesai",
+    "handledBy": "Bpk. Amir",
+    "createdAt": "2026-08-26T15:44:36.144Z",
+    "updatedAt": "2026-08-26T15:44:36.521Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "fonnte",
+      "timestamp": "2026-08-26T15:44:36.437Z",
+      "details": {
+        "success": true,
+        "provider": "fonnte",
+        "data": {
+          "detail": "success! message in queue",
+          "id": [
+            175344551
+          ],
+          "process": "pending",
+          "quota": {
+            "081380871850": {
+              "details": "deduced from total quota",
+              "quota": 991,
+              "remaining": 990,
+              "used": 1
+            }
+          },
+          "requestid": 672695013,
+          "status": true,
+          "target": [
+            "6287854277345"
+          ]
+        },
+        "dispatchedText": "🚨 *PANGGILAN BANTUAN TEKNIS SBM ITB*\n\nMohon bantuan di ruang Kirana Megatara 1 SEGERA!\n\n📌 Kendala: Proyektor\n📝 Info Tambahan: Test call 1\n\n🕒 Waktu: 26 Agu 2026, 22.44 WIB\n🆔 ID Tiket: #LC-673\n\n👉 *Klaim Tugas Cepat:* https://qr-layanan-teknis-sbm.vercel.app/claim?ticket=TICK-MTA9LFLC-673"
+      }
+    }
+  }
+]

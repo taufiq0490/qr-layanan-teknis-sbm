@@ -116,6 +116,16 @@
   </footer>
 
   <script>
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
       const container = document.getElementById('roomListContainer');
       try {
@@ -131,7 +141,7 @@
         container.innerHTML = rooms.map(room => `
           <a href="/call?room=${encodeURIComponent(room)}" class="room-card-link">
             <div>
-              <div class="room-card-title">📍 ${room}</div>
+              <div class="room-card-title">📍 ${escapeHTML(room)}</div>
               <div class="room-card-desc">SBM ITB Kampus Jakarta</div>
             </div>
             <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">

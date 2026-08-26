@@ -1,21 +1,43 @@
+function escapeHTML(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const roomParam = urlParams.get('room') || 'Henk Uno';
   
   const displayRoomName = document.getElementById('displayRoomName');
-  const confirmedRoomName = document.getElementById('confirmedRoomName');
+  const trackingRoomName = document.getElementById('trackingRoomName');
+  const trackingTicketId = document.getElementById('trackingTicketId');
   const btnCallNow = document.getElementById('btnCallNow');
   const categoryChips = document.querySelectorAll('.chip-option');
   const inputNotes = document.getElementById('inputNotes');
   const callCard = document.getElementById('callCard');
-  const successBox = document.getElementById('successBox');
+  const trackingBox = document.getElementById('trackingBox');
   const btnCallAgain = document.getElementById('btnCallAgain');
 
-  let selectedCategory = 'Umum';
+  const step1 = document.getElementById('step1');
+  const step2 = document.getElementById('step2');
+  const step3 = document.getElementById('step3');
 
-  // Set room name display
+  const liveStatusCard = document.getElementById('liveStatusCard');
+  const statusEmoji = document.getElementById('statusEmoji');
+  const statusTitle = document.getElementById('statusTitle');
+  const statusDesc = document.getElementById('statusDesc');
+
+  let selectedCategory = 'Umum';
+  let activeTicketId = null;
+  let pollInterval = null;
+
+  // Set room name display safely
   displayRoomName.textContent = roomParam;
-  confirmedRoomName.textContent = roomParam;
+  if (trackingRoomName) trackingRoomName.textContent = roomParam;
 
   // Category selection handler
   categoryChips.forEach(chip => {
@@ -47,10 +69,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
 
-      if (data.success) {
-        // Show success state
-        callCard.style.display = 'none';
-        successBox.style.display = 'block';
+      if (response.status === 429) {
+        alert('⏱️ ' + (data.error || 'Batas panggilan tercapai. Mohon tunggu sejenak.'));
+        resetButton();
+        return;
+      }
+
+      if (data.success && data.ticket) {
+        activeTicketId = data.ticket.id;
+        showTrackingView(data.ticket);
       } else {
         alert('Gagal mengirim panggilan: ' + (data.error || 'Terjadi kesalahan'));
         resetButton();
@@ -62,6 +89,78 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  function showTrackingView(ticket) {
+    callCard.style.display = 'none';
+    trackingBox.style.display = 'block';
+    trackingTicketId.textContent = '#' + ticket.id.slice(-6);
+
+    updateTrackingUI(ticket);
+
+    // Start Live Polling every 3 seconds
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(pollTicketStatus, 3000);
+  }
+
+  async function pollTicketStatus() {
+    if (!activeTicketId) return;
+
+    try {
+      const res = await fetch(`/api/tickets/${encodeURIComponent(activeTicketId)}`);
+      const data = await res.json();
+      if (data.success && data.ticket) {
+        updateTrackingUI(data.ticket);
+        if (data.ticket.status === 'Selesai' && pollInterval) {
+          // Slow down polling once finished
+          clearInterval(pollInterval);
+          pollInterval = setInterval(pollTicketStatus, 10000);
+        }
+      }
+    } catch (e) {
+      console.warn('Poll ticket error:', e);
+    }
+  }
+
+  function updateTrackingUI(ticket) {
+    const status = ticket.status;
+    const handler = ticket.handledBy || '';
+
+    // Reset classes
+    liveStatusCard.className = 'live-status-card';
+    step1.className = 'step-item';
+    step2.className = 'step-item';
+    step3.className = 'step-item';
+
+    if (status === 'Menunggu') {
+      liveStatusCard.classList.add('state-menunggu');
+      statusEmoji.textContent = '🟡';
+      statusTitle.textContent = 'Menunggu Support...';
+      statusDesc.textContent = 'Panggilan bantuan telah terkirim ke WhatsApp tim teknis. Menunggu staf mengambil tiket.';
+
+      step1.classList.add('active');
+    } else if (status === 'Diproses') {
+      liveStatusCard.classList.add('state-diproses');
+      statusEmoji.textContent = '🔵';
+      
+      const staffDisplay = handler ? `Support (${handler})` : 'Tim Support';
+      statusTitle.textContent = `${staffDisplay} sedang menuju lokasi`;
+      statusDesc.textContent = `Staf ${staffDisplay} telah menerima panggilan Anda dan sedang dalam perjalanan menuju ruang ${ticket.room}.`;
+
+      step1.classList.add('completed');
+      step2.classList.add('active');
+    } else if (status === 'Selesai') {
+      liveStatusCard.classList.add('state-selesai');
+      statusEmoji.textContent = '🟢';
+      statusTitle.textContent = 'Kendala telah selesai ditangani';
+      statusDesc.textContent = handler 
+        ? `Bantuan teknis telah diselesaikan oleh ${handler}. Terima kasih telah menggunakan layanan teknis SBM ITB.`
+        : 'Bantuan teknis telah selesai dilaksanakan. Terima kasih.';
+
+      step1.classList.add('completed');
+      step2.classList.add('completed');
+      step3.classList.add('completed');
+    }
+  }
+
   function resetButton() {
     btnCallNow.disabled = false;
     btnCallNow.innerHTML = '<span>🚨 PANGGIL BANTUAN SEGERA</span>';
@@ -69,9 +168,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Call again button
   btnCallAgain.addEventListener('click', () => {
-    successBox.style.display = 'none';
+    if (pollInterval) clearInterval(pollInterval);
+    activeTicketId = null;
+    trackingBox.style.display = 'none';
     callCard.style.display = 'block';
     resetButton();
     inputNotes.value = '';
   });
 });
+

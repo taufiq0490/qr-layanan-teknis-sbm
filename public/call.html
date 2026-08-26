@@ -6,10 +6,40 @@
   <title>Panggilan Bantuan Teknis - SBM ITB Jakarta</title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
+    .wifi-alert-banner {
+      background: #EFF6FF;
+      border: 1.5px solid #93C5FD;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: #1E3A8A;
+      box-shadow: 0 2px 6px rgba(30, 58, 138, 0.06);
+    }
+    .wifi-alert-banner .wifi-icon {
+      font-size: 1.3rem;
+      line-height: 1;
+    }
+    .rate-limit-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #FFFBEB;
+      border: 1px solid #FCD34D;
+      color: #92400E;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
     .call-card {
       background: white;
       border-radius: 16px;
-      padding: 24px 20px;
+      padding: 22px 18px;
       box-shadow: 0 10px 30px rgba(15, 44, 89, 0.08);
       border: 1px solid var(--border-color);
       text-align: center;
@@ -19,7 +49,7 @@
       color: white;
       padding: 14px 20px;
       border-radius: 12px;
-      margin: 12px 0 20px;
+      margin: 10px 0 18px;
       box-shadow: 0 4px 12px rgba(15, 44, 89, 0.2);
     }
     .room-display .label {
@@ -34,37 +64,126 @@
       font-weight: 800;
       margin-top: 4px;
     }
-    .success-box {
+    
+    /* Live Tracking Box */
+    .tracking-box {
       display: none;
-      background: #ECFDF5;
-      border: 2px solid #10B981;
-      border-radius: 14px;
-      padding: 24px 16px;
+      background: white;
+      border-radius: 16px;
+      padding: 24px 18px;
+      box-shadow: 0 10px 30px rgba(15, 44, 89, 0.1);
+      border: 1px solid var(--border-color);
       text-align: center;
-      margin-top: 15px;
       animation: fadeIn 0.4s ease-out;
     }
-    .success-icon {
-      width: 64px;
-      height: 64px;
+    .tracking-header {
+      margin-bottom: 18px;
+    }
+    .tracking-header h2 {
+      font-size: 1.3rem;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .tracking-header p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .live-status-card {
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+    }
+    .state-menunggu {
+      background: #FEF3C7;
+      border: 2px solid #F59E0B;
+      color: #92400E;
+    }
+    .state-diproses {
+      background: #EFF6FF;
+      border: 2px solid #3B82F6;
+      color: #1E40AF;
+      animation: pulseBorder 2s infinite;
+    }
+    .state-selesai {
+      background: #ECFDF5;
+      border: 2px solid #10B981;
+      color: #065F46;
+    }
+    .status-emoji {
+      font-size: 2.2rem;
+      margin-bottom: 6px;
+      display: inline-block;
+    }
+    .status-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .status-desc {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .timeline-steps {
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+      margin: 24px 10px;
+    }
+    .timeline-steps::before {
+      content: '';
+      position: absolute;
+      top: 14px;
+      left: 15px;
+      right: 15px;
+      height: 3px;
+      background: #E2E8F0;
+      z-index: 1;
+    }
+    .step-item {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #94A3B8;
+      width: 80px;
+    }
+    .step-dot {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: white;
+      border: 3px solid #CBD5E1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+      transition: all 0.3s;
+    }
+    .step-item.active .step-dot {
+      border-color: #3B82F6;
+      background: #3B82F6;
+      color: white;
+    }
+    .step-item.active {
+      color: #1E40AF;
+    }
+    .step-item.completed .step-dot {
+      border-color: #10B981;
       background: #10B981;
       color: white;
-      font-size: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      margin: 0 auto 14px;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     }
-    .privacy-badge {
-      font-size: 0.75rem;
-      color: #64748B;
-      margin-top: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
+    .step-item.completed {
+      color: #065F46;
+    }
+    @keyframes pulseBorder {
+      0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+      70% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
     }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
@@ -97,9 +216,26 @@
     </div>
   </header>
 
-  <main class="container-sm">
+  <main class="container-sm" style="margin-top: 15px;">
+    
+    <!-- Wi-Fi ITB HOT SPOT & ITB GUEST Warning Banner -->
+    <div class="wifi-alert-banner" id="wifiBanner">
+      <div class="wifi-icon">📶</div>
+      <div>
+        <strong>Pemberitahuan Jaringan Kampus:</strong>
+        <div>Untuk kenyamanan respon teknis, pastikan Anda berada di area kampus dan terhubung ke Wi-Fi <strong>ITB HOT SPOT</strong> atau <strong>ITB GUEST</strong>.</div>
+      </div>
+    </div>
+
+    <!-- Call Form Card -->
     <div class="call-card" id="callCard">
       
+      <!-- Limit Notice Badge -->
+      <div class="rate-limit-badge">
+        <span>⏱️</span>
+        <span>Batas panggilan: Maks. 3 kali per 2 menit</span>
+      </div>
+
       <!-- Room Indicator -->
       <div class="room-display">
         <div class="label">LOKASI RUANG KELAS</div>
@@ -112,7 +248,7 @@
       </button>
 
       <!-- Optional Category Selector -->
-      <div style="margin-top: 24px; text-align: left;">
+      <div style="margin-top: 22px; text-align: left;">
         <p style="font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 8px;">
           Pilih Jenis Kendala (Opsional):
         </p>
@@ -137,34 +273,57 @@
           </div>
         </div>
 
-        <!-- Notes (Expandable) -->
+        <!-- Notes -->
         <div class="form-group" style="margin-top: 12px;">
           <input type="text" id="inputNotes" class="form-control" placeholder="Catatan singkat kendala (opsional)..." maxlength="120">
         </div>
       </div>
 
       <!-- Privacy Notice -->
-      <div class="privacy-badge">
-        <span>🔒</span>
-        <span>Nomor kontak staf aman & terlindungi oleh sistem.</span>
+      <div style="font-size: 0.75rem; color: #64748B; margin-top: 16px;">
+        🔒 Notifikasi langsung terkirim ke WhatsApp Tim Support SBM ITB.
       </div>
-
     </div>
 
-    <!-- Success Feedback View (Shown after sending) -->
-    <div class="success-box" id="successBox">
-      <div class="success-icon">✓</div>
-      <h2 style="color: #065F46; font-size: 1.35rem; margin-bottom: 8px;">Panggilan Bantuan Terkirim!</h2>
-      <p style="color: #047857; font-size: 0.95rem; line-height: 1.5; margin-bottom: 16px;">
-        Notifikasi bantuan untuk <strong><span id="confirmedRoomName"></span></strong> telah berhasil diteruskan ke WhatsApp Staf Teknis SBM ITB.
-      </p>
-      <div style="background: white; border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #475569; border: 1px solid #A7F3D0; margin-bottom: 16px;">
-        Staf bertugas sedang menuju ke lokasi ruangan Anda.
+    <!-- Real-Time Live Tracking View (Shown after sending) -->
+    <div class="tracking-box" id="trackingBox">
+      <div class="tracking-header">
+        <h2>Status Penanganan Langsung</h2>
+        <p>Ruang: <strong id="trackingRoomName" style="color: var(--primary);">-</strong> | ID Tiket: <span id="trackingTicketId">-</span></p>
       </div>
+
+      <!-- Timeline visual -->
+      <div class="timeline-steps">
+        <div class="step-item active" id="step1">
+          <div class="step-dot">1</div>
+          <span>Menunggu</span>
+        </div>
+        <div class="step-item" id="step2">
+          <div class="step-dot">2</div>
+          <span>Menuju Lokasi</span>
+        </div>
+        <div class="step-item" id="step3">
+          <div class="step-dot">3</div>
+          <span>Selesai</span>
+        </div>
+      </div>
+
+      <!-- Dynamic Status Card -->
+      <div class="live-status-card state-menunggu" id="liveStatusCard">
+        <div class="status-emoji" id="statusEmoji">🟡</div>
+        <div class="status-title" id="statusTitle">Menunggu Support...</div>
+        <div class="status-desc" id="statusDesc">Panggilan telah terkirim ke WhatsApp staf. Menunggu staf mengambil penanganan.</div>
+      </div>
+
+      <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">
+        🔄 Status diperbarui secara otomatis setiap beberapa detik.
+      </div>
+
       <button class="btn btn-outline" id="btnCallAgain" style="font-size: 0.85rem; padding: 8px 16px;">
-        Kirim Panggilan Tambahan
+        ← Panggil Ulang / Buat Tiket Baru
       </button>
     </div>
+
   </main>
 
   <footer class="footer">
@@ -174,3 +333,4 @@
   <script src="/js/call.js"></script>
 </body>
 </html>
+

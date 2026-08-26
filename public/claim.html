@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klaim Tanggap Cepat - SBM ITB Layanan Teknis</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .claim-container {
+      max-width: 480px;
+      margin: 30px auto;
+      padding: 0 1rem;
+    }
+    .claim-card {
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 2rem 1.5rem;
+      border: 1px solid var(--border-color);
+    }
+    .claim-header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    .claim-header .badge-icon {
+      font-size: 2.2rem;
+      display: inline-block;
+      margin-bottom: 0.5rem;
+    }
+    .claim-header h2 {
+      font-size: 1.35rem;
+      color: var(--primary);
+    }
+    .claim-header p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .ticket-info-box {
+      background: #F1F5F9;
+      border-left: 4px solid var(--primary);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px dashed #CBD5E1;
+      font-size: 0.9rem;
+    }
+    .info-row:last-child {
+      border-bottom: none;
+    }
+    .info-label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .info-value {
+      font-weight: 700;
+      color: var(--text-dark);
+      text-align: right;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .status-menunggu {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+    .status-diproses {
+      background: #DBEAFE;
+      color: #1E40AF;
+    }
+    .status-selesai {
+      background: #D1FAE5;
+      color: #065F46;
+    }
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 0.4rem;
+      color: var(--text-dark);
+    }
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    }
+    .btn-claim {
+      width: 100%;
+      background: #0284C7;
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+    .btn-claim:hover {
+      background: #0369A1;
+    }
+    .btn-complete {
+      width: 100%;
+      background: var(--success);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-top: 1rem;
+      transition: background 0.2s;
+    }
+    .btn-complete:hover {
+      background: #059669;
+    }
+    .preset-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .chip-btn {
+      background: #E2E8F0;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .chip-btn:hover {
+      background: #CBD5E1;
+      color: var(--primary);
+    }
+    .claimed-alert {
+      background: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      border-radius: 8px;
+      padding: 12px;
+      color: #1E40AF;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    .done-alert {
+      background: #ECFDF5;
+      border: 1px solid #A7F3D0;
+      border-radius: 8px;
+      padding: 14px;
+      color: #065F46;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="navbar">
+    <a href="/" class="nav-brand">
+      <span class="brand-badge">SBM ITB</span>
+      <div class="brand-text">
+        <h1>Klaim Tanggap Cepat</h1>
+        <p>Portal Staf Support</p>
+      </div>
+    </a>
+  </header>
+
+  <main class="claim-container">
+    <div class="claim-card">
+      <div class="claim-header">
+        <span class="badge-icon">🛠️</span>
+        <h2>Penanganan Panggilan Teknis</h2>
+        <p id="ticketIdText">Memuat data tiket...</p>
+      </div>
+
+      <div id="ticketLoading" style="text-align: center; padding: 20px; color: var(--text-muted);">
+        ⏳ Mengambil rincian tiket...
+      </div>
+
+      <div id="ticketDetails" style="display: none;">
+        <div class="ticket-info-box">
+          <div class="info-row">
+            <span class="info-label">📍 Ruang Kelas:</span>
+            <span class="info-value" id="roomVal" style="font-size: 1.1rem; color: var(--primary);">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">📌 Kendala:</span>
+            <span class="info-value" id="catVal">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">📝 Catatan:</span>
+            <span class="info-value" id="notesVal">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">🕒 Waktu Panggilan:</span>
+            <span class="info-value" id="timeVal">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">⚡ Status:</span>
+            <span class="info-value" id="statusVal">-</span>
+          </div>
+        </div>
+
+        <!-- State 1: Menunggu -> Form Klaim -->
+        <div id="claimActionSection" style="display: none;">
+          <form id="claimForm">
+            <div class="form-group">
+              <label for="staffNameInput">Nama Anda (Staf Support):</label>
+              <input type="text" id="staffNameInput" class="form-input" placeholder="Contoh: Bpk. Amir / Pak Ahmad" required>
+              <div class="preset-chips">
+                <button type="button" class="chip-btn" onclick="setStaffName('Bpk. Amir')">Bpk. Amir</button>
+                <button type="button" class="chip-btn" onclick="setStaffName('Bpk. Ahmad')">Bpk. Ahmad</button>
+                <button type="button" class="chip-btn" onclick="setStaffName('Tim IT SBM')">Tim IT SBM</button>
+              </div>
+            </div>
+
+            <button type="submit" id="btnClaimSubmit" class="btn-claim">
+              🚀 Ambil & Tangani Tiket Sekarang
+            </button>
+          </form>
+        </div>
+
+        <!-- State 2: Diproses -> Info Sedang Diproses & Tombol Selesai -->
+        <div id="inProgressSection" style="display: none;">
+          <div class="claimed-alert">
+            🔵 Tiket sedang dalam penanganan oleh: <br><strong id="currentHandlerText" style="font-size: 1.1rem;">-</strong>
+            <div style="font-size: 0.8rem; margin-top: 4px; color: #475569;">Layar pemanggil di ruangan otomatis diperbarui bahwa Anda sedang menuju lokasi.</div>
+          </div>
+
+          <button type="button" id="btnCompleteSubmit" class="btn-complete">
+            ✓ Tandai Masalah Telah Selesai Ditangani
+          </button>
+        </div>
+
+        <!-- State 3: Selesai -->
+        <div id="completedSection" style="display: none;">
+          <div class="done-alert">
+            ✅ Kendala teknis di ruang ini telah selesai ditangani.
+            <div id="completedHandlerText" style="font-size: 0.85rem; font-weight: normal; margin-top: 4px; color: #047857;"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="ticketNotFound" style="display: none; text-align: center; padding: 20px;">
+        <div style="font-size: 2rem;">❌</div>
+        <h3 style="color: var(--danger); margin: 10px 0;">Tiket Tidak Ditemukan</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">ID Tiket tidak valid atau telah dihapus dari sistem.</p>
+      </div>
+
+      <div style="text-align: center; margin-top: 1.5rem;">
+        <a href="/admin" style="color: var(--text-muted); font-size: 0.85rem; text-decoration: none;">
+          ⚙️ Buka Dashboard Admin
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/claim.js"></script>
+</body>
+</html>

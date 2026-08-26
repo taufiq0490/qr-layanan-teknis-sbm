@@ -1,3 +1,13 @@
+function escapeHTML(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 let currentFilter = 'all';
 let previousTicketCount = null;
 
@@ -20,9 +30,23 @@ function playBeep() {
   }
 }
 
+async function handleLogout() {
+  if (confirm('Apakah Anda yakin ingin keluar dari sesi admin?')) {
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' });
+    } catch (e) {}
+    localStorage.removeItem('admin_token');
+    window.location.href = '/login';
+  }
+}
+
 async function loadTickets() {
   try {
     const res = await fetch('/api/tickets');
+    if (res.status === 401) {
+      window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
     const data = await res.json();
     
     if (!data.success) return;
@@ -63,7 +87,7 @@ function renderTable(tickets) {
   if (tickets.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">
+        <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
           Tidak ada panggilan tiket yang sesuai filter saat ini.
         </td>
       </tr>
@@ -84,7 +108,7 @@ function renderTable(tickets) {
     if (ticket.status === 'Menunggu') {
       actionButtons = `
         <div class="action-btn-group">
-          <button class="btn-xs btn-primary" onclick="updateStatus('${ticket.id}', 'Diproses')">
+          <button class="btn-xs btn-primary" onclick="promptProcess('${ticket.id}')">
             🛠️ Proses
           </button>
           <button class="btn-xs btn-success" onclick="updateStatus('${ticket.id}', 'Selesai')">
@@ -104,6 +128,11 @@ function renderTable(tickets) {
       actionButtons = `<span style="font-size: 0.75rem; color: var(--text-muted);">Tiket Selesai</span>`;
     }
 
+    const safeRoom = escapeHTML(ticket.room);
+    const safeCategory = escapeHTML(ticket.category || 'Umum');
+    const safeNotes = escapeHTML(ticket.notes);
+    const safeHandledBy = escapeHTML(ticket.handledBy || '-');
+
     return `
       <tr>
         <td style="white-space: nowrap;">
@@ -111,14 +140,19 @@ function renderTable(tickets) {
           <div style="font-size: 0.75rem; color: var(--text-muted);">${dateStr}</div>
         </td>
         <td>
-          <div style="font-weight: 800; font-size: 1rem; color: var(--primary);">📍 ${ticket.room}</div>
+          <div style="font-weight: 800; font-size: 1rem; color: var(--primary);">📍 ${safeRoom}</div>
         </td>
         <td>
-          <span style="font-weight: 600;">${ticket.category || 'Umum'}</span>
+          <span style="font-weight: 600;">${safeCategory}</span>
         </td>
         <td>
           <span style="color: ${ticket.notes ? '#334155' : '#94A3B8'}; font-style: ${ticket.notes ? 'normal' : 'italic'};">
-            ${ticket.notes || '-'}
+            ${safeNotes || '-'}
+          </span>
+        </td>
+        <td>
+          <span style="font-weight: 600; color: #1E40AF;">
+            ${ticket.handledBy ? `👤 ${safeHandledBy}` : '<span style="color: #94A3B8;">-</span>'}
           </span>
         </td>
         <td>
@@ -132,13 +166,26 @@ function renderTable(tickets) {
   }).join('');
 }
 
-async function updateStatus(ticketId, newStatus) {
+async function promptProcess(ticketId) {
+  const staff = prompt('Masukkan nama staf support yang menangani tiket ini:', 'Bpk. Amir');
+  if (staff === null) return; // user cancelled
+  await updateStatus(ticketId, 'Diproses', staff.trim() || 'Tim Support');
+}
+
+async function updateStatus(ticketId, newStatus, handledBy = "") {
   try {
+    const payload = { status: newStatus };
+    if (handledBy) payload.handledBy = handledBy;
+
     const res = await fetch(`/api/tickets/${ticketId}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus })
+      body: JSON.stringify(payload)
     });
+    if (res.status === 401) {
+      window.location.href = '/login';
+      return;
+    }
     const data = await res.json();
     if (data.success) {
       loadTickets();
@@ -180,6 +227,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       try {
         const res = await fetch('/api/admin/clear-tickets', { method: 'POST' });
+        if (res.status === 401) {
+          window.location.href = '/login';
+          return;
+        }
         const data = await res.json();
         if (data.success) {
           alert('Riwayat tiket berhasil dikosongkan.');
@@ -194,3 +245,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+

@@ -1,3 +1,23 @@
+function escapeHTML(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+async function handleLogout() {
+  if (confirm('Apakah Anda yakin ingin keluar dari sesi admin?')) {
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' });
+    } catch (e) {}
+    localStorage.removeItem('admin_token');
+    window.location.href = '/login';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const container = document.getElementById('qrCardsContainer');
   const baseUrlInput = document.getElementById('baseUrlInput');

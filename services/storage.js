@@ -13,6 +13,13 @@ const TMP_TICKETS_PATH = path.join(tmpDir, 'tickets.json');
 let inMemoryConfig = null;
 let inMemoryTickets = null;
 
+function sanitizeString(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/[<>]/g, '') // remove direct html tags
+    .trim();
+}
+
 function readConfig() {
   if (inMemoryConfig) return inMemoryConfig;
   try {
@@ -93,12 +100,17 @@ function saveTickets(tickets) {
 
 function createTicket(room, category = "Umum", notes = "") {
   const tickets = readTickets();
+  const safeRoom = sanitizeString(room);
+  const safeCategory = sanitizeString(category) || "Umum";
+  const safeNotes = sanitizeString(notes);
+
   const newTicket = {
     id: "TICK-" + Date.now().toString(36).toUpperCase() + "-" + Math.floor(Math.random() * 1000),
-    room,
-    category: category || "Umum",
-    notes: notes || "",
+    room: safeRoom,
+    category: safeCategory,
+    notes: safeNotes,
     status: "Menunggu", // 'Menunggu', 'Diproses', 'Selesai'
+    handledBy: "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     waStatus: {
@@ -118,11 +130,18 @@ function updateTicketStatus(id, status, handledBy = "") {
   if (ticket) {
     ticket.status = status;
     ticket.updatedAt = new Date().toISOString();
-    if (handledBy) ticket.handledBy = handledBy;
+    if (handledBy !== undefined && handledBy !== null) {
+      ticket.handledBy = sanitizeString(handledBy);
+    }
     saveTickets(tickets);
     return ticket;
   }
   return null;
+}
+
+function getTicketById(id) {
+  const tickets = readTickets();
+  return tickets.find(t => t.id === id) || null;
 }
 
 function updateTicketWaStatus(id, waStatus) {
@@ -148,8 +167,10 @@ module.exports = {
   saveConfig,
   readTickets,
   saveTickets,
+  getTicketById,
   createTicket,
   updateTicketStatus,
   updateTicketWaStatus,
-  clearAllTickets
+  clearAllTickets,
+  sanitizeString
 };

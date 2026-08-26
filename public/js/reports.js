@@ -1,3 +1,23 @@
+function escapeHTML(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+async function handleLogout() {
+  if (confirm('Apakah Anda yakin ingin keluar dari sesi admin?')) {
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' });
+    } catch (e) {}
+    localStorage.removeItem('admin_token');
+    window.location.href = '/login';
+  }
+}
+
 let allTickets = [];
 let filteredTickets = [];
 let availableRooms = [];
@@ -71,7 +91,7 @@ async function loadRooms() {
       availableRooms = data.rooms;
       const roomSelect = document.getElementById('filterRoom');
       roomSelect.innerHTML = '<option value="all">Semua Ruangan</option>' + 
-        availableRooms.map(r => `<option value="${r}">${r}</option>`).join('');
+        availableRooms.map(r => `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`).join('');
     }
   } catch (err) {
     console.error('Error loading rooms:', err);
@@ -82,6 +102,10 @@ async function loadRooms() {
 async function loadTickets() {
   try {
     const res = await fetch('/api/tickets');
+    if (res.status === 401) {
+      window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
     const data = await res.json();
     if (data.success && data.tickets) {
       allTickets = data.tickets;
@@ -459,6 +483,10 @@ function renderTable() {
       waText = `<span style="color: #DC2626; font-size: 0.8rem;">✕ Gagal</span>`;
     }
 
+    const safeRoom = escapeHTML(t.room);
+    const safeCategory = escapeHTML(t.category || 'Umum');
+    const safeNotes = escapeHTML(t.notes);
+
     return `
       <tr>
         <td style="text-align: center; font-weight: 600; color: var(--text-muted);">${index + 1}</td>
@@ -467,14 +495,14 @@ function renderTable() {
           <div style="font-size: 0.75rem; color: var(--text-muted);">${dateStr}</div>
         </td>
         <td>
-          <strong style="color: var(--primary);">📍 ${t.room}</strong>
+          <strong style="color: var(--primary);">📍 ${safeRoom}</strong>
         </td>
         <td>
-          <span style="font-weight: 600;">${t.category || 'Umum'}</span>
+          <span style="font-weight: 600;">${safeCategory}</span>
         </td>
         <td>
           <span style="color: ${t.notes ? '#334155' : '#94A3B8'}; font-style: ${t.notes ? 'normal' : 'italic'}; font-size: 0.85rem;">
-            ${t.notes || '-'}
+            ${safeNotes || '-'}
           </span>
         </td>
         <td>
