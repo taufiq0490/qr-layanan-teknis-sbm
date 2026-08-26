@@ -136,7 +136,7 @@ let publicTunnelUrl = null;
 app.post('/api/admin/login', (req, res) => {
   const { password } = req.body;
   const config = readConfig();
-  const validPassword = config.adminPassword || 'admin';
+  const validPassword = process.env.ADMIN_PASSWORD || config.adminPassword || 'admin';
 
   if (password === validPassword) {
     const token = crypto.randomBytes(32).toString('hex');

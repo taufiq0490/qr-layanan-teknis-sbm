@@ -92,10 +92,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       .map(s => s.trim())
       .filter(Boolean);
 
+    const newPass = adminPasswordInput && adminPasswordInput.value.trim();
+
     const payload = {
       messageTemplate: messageTemplate.value.trim(),
       claimBaseUrl: claimBaseUrl ? claimBaseUrl.value.trim() : undefined,
-      adminPassword: adminPasswordInput && adminPasswordInput.value.trim() ? adminPasswordInput.value.trim() : undefined,
+      adminPassword: newPass || undefined,
       rooms: currentRooms,
       waGateway: {
         provider: fonnteToken.value.trim() ? 'fonnte' : 'simulation',
@@ -116,7 +118,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       const data = await res.json();
       if (data.success) {
-        alert('✅ Pengaturan sistem & WhatsApp Gateway berhasil disimpan!');
+        if (newPass) {
+          alert('✅ Pengaturan & Kata Sandi Admin baru berhasil disimpan! Silakan gunakan kata sandi baru saat login berikutnya.');
+        } else {
+          alert('✅ Pengaturan sistem & WhatsApp Gateway berhasil disimpan!');
+        }
         if (adminPasswordInput) adminPasswordInput.value = '';
       } else {
         alert('❌ Gagal menyimpan: ' + data.error);

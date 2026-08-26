@@ -18,5 +18,6 @@
     "countryCode": "62",
     "webhookUrl": ""
   },
-  "adminPassword": "admin"
+  "adminPassword": "Bismillah.1",
+  "claimBaseUrl": "https://qr-layanan-teknis-sbm.vercel.app"
 }
