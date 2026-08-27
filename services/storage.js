@@ -70,6 +70,75 @@ function saveConfig(config) {
   }
 }
 
+function getStorageStatus() {
+  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const hasCloudKv = Boolean(kvUrl && kvToken);
+  return {
+    isVercel: Boolean(isVercel),
+    hasCloudKv,
+    storageType: hasCloudKv ? 'Vercel KV / Upstash Redis (Persistent Cloud)' : (isVercel ? 'Vercel Ephemeral Memory (/tmp)' : 'Local File Storage (tickets.json)')
+  };
+}
+
+// Cloud KV / Upstash Redis REST integration for Vercel
+async function getKvConfig() {
+  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!kvUrl || !kvToken) return null;
+  try {
+    const res = await fetch(`${kvUrl}/get/sbm_config`, {
+      headers: { Authorization: `Bearer ${kvToken}` },
+      signal: AbortSignal.timeout(4000)
+    });
+    const data = await res.json();
+    if (data && data.result) {
+      const parsed = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    }
+    return null;
+  } catch (e) {
+    console.error("Error reading config from Cloud KV:", e.message);
+    return null;
+  }
+}
+
+async function setKvConfig(config) {
+  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!kvUrl || !kvToken) return false;
+  try {
+    await fetch(`${kvUrl}/set/sbm_config`, {
+      method: 'POST',
+      headers: { 
+        Authorization: `Bearer ${kvToken}`,
+        'Content-Type': 'application/json'
+      },
+      signal: AbortSignal.timeout(4000),
+      body: JSON.stringify(config)
+    });
+    return true;
+  } catch (e) {
+    console.error("Error saving config to Cloud KV:", e.message);
+    return false;
+  }
+}
+
+async function readConfigAsync() {
+  const cloudConfig = await getKvConfig();
+  if (cloudConfig && typeof cloudConfig === 'object') {
+    inMemoryConfig = { ...readConfig(), ...cloudConfig };
+    return inMemoryConfig;
+  }
+  return readConfig();
+}
+
+async function saveConfigAsync(config) {
+  inMemoryConfig = config;
+  await setKvConfig(config);
+  return saveConfig(config);
+}
+
 // Cloud KV / Upstash Redis REST integration for Vercel
 async function getKvTickets() {
   const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -77,7 +146,8 @@ async function getKvTickets() {
   if (!kvUrl || !kvToken) return null;
   try {
     const res = await fetch(`${kvUrl}/get/sbm_tickets`, {
-      headers: { Authorization: `Bearer ${kvToken}` }
+      headers: { Authorization: `Bearer ${kvToken}` },
+      signal: AbortSignal.timeout(4000)
     });
     const data = await res.json();
     if (data && data.result) {
@@ -86,7 +156,7 @@ async function getKvTickets() {
     }
     return [];
   } catch (e) {
-    console.error("Error reading tickets from Cloud KV:", e);
+    console.error("Error reading tickets from Cloud KV:", e.message);
     return null;
   }
 }
@@ -102,11 +172,12 @@ async function setKvTickets(tickets) {
         Authorization: `Bearer ${kvToken}`,
         'Content-Type': 'application/json'
       },
+      signal: AbortSignal.timeout(4000),
       body: JSON.stringify(tickets)
     });
     return true;
   } catch (e) {
-    console.error("Error saving tickets to Cloud KV:", e);
+    console.error("Error saving tickets to Cloud KV:", e.message);
     return false;
   }
 }
@@ -340,7 +411,10 @@ function clearAllTickets() {
 
 module.exports = {
   readConfig,
+  readConfigAsync,
   saveConfig,
+  saveConfigAsync,
+  getStorageStatus,
   readTickets,
   readTicketsAsync,
   saveTickets,

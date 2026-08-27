@@ -571,7 +571,29 @@ app.post('/api/call', callRateLimiter, async (req, res) => {
       );
     }
 
-    // Respond immediately to client caller (0ms lag on HP Dosen)
+    // Await parallel dispatches with race timeout so Vercel Serverless doesn't freeze the Lambda before Telegram finishes!
+    let results = [];
+    try {
+      results = await Promise.race([
+        Promise.all(dispatchPromises),
+        new Promise((resolve) => setTimeout(() => resolve([]), 4000))
+      ]);
+    } catch (e) {
+      console.warn('Dispatch notification race error:', e);
+    }
+
+    const waRes = results.find(r => r && (r.provider === 'fonnte' || r.mode === 'simulation')) || { success: false };
+    const teleRes = results.find(r => r && (r.provider === 'telegram')) || { success: false };
+
+    // Update ticket dispatch record
+    await updateTicketWaStatusAsync(ticket.id, {
+      sent: results.some(r => r && r.success),
+      provider: channel,
+      timestamp: new Date().toISOString(),
+      details: { waResult: waRes, teleResult: teleRes }
+    }).catch(() => {});
+
+    // Respond to client caller
     res.json({
       success: true,
       message: `Panggilan bantuan untuk ruang ${safeRoom} telah diterima dan diteruskan ke tim staf support.`,
@@ -583,20 +605,13 @@ app.post('/api/call', callRateLimiter, async (req, res) => {
         createdAt: ticket.createdAt,
         status: ticket.status,
         handledBy: ticket.handledBy || ""
+      },
+      dispatch: {
+        channel,
+        wa: waRes,
+        telegram: teleRes
       }
     });
-
-    // Run notifications concurrently in background & update delivery status
-    Promise.all(dispatchPromises).then(async (results) => {
-      const waRes = results.find(r => r && (r.provider === 'fonnte' || r.mode === 'simulation')) || { success: false };
-      const teleRes = results.find(r => r && (r.provider === 'telegram')) || { success: false };
-      await updateTicketWaStatusAsync(ticket.id, {
-        sent: results.some(r => r && r.success),
-        provider: channel,
-        timestamp: new Date().toISOString(),
-        details: { waResult: waRes, teleResult: teleRes }
-      });
-    }).catch(e => console.error('Background dispatch error:', e));
   } catch (error) {
     console.error('Error handling /api/call:', error);
     res.status(500).json({ success: false, error: error.message || 'Terjadi kesalahan sistem' });
@@ -795,7 +810,7 @@ app.get('/api/admin/settings', requireSuperAdminAuthAPI, (req, res) => {
 });
 
 // 7. Save Settings (Super Admin - Protected with SAFE TOKEN PRESERVATION & OLD PASSWORD VERIFICATION)
-app.post('/api/admin/settings', requireSuperAdminAuthAPI, (req, res) => {
+app.post('/api/admin/settings', requireSuperAdminAuthAPI, async (req, res) => {
   const { 
     appTitle, 
     rooms, 
@@ -885,7 +900,7 @@ app.post('/api/admin/settings', requireSuperAdminAuthAPI, (req, res) => {
     }
   };
 
-  const saved = saveConfig(newConfig);
+  const saved = await saveConfigAsync(newConfig);
   if (saved) {
     let newToken = null;
     if (isChangingSuperPass) {
@@ -900,6 +915,12 @@ app.post('/api/admin/settings', requireSuperAdminAuthAPI, (req, res) => {
   } else {
     res.status(500).json({ success: false, error: 'Gagal menyimpan konfigurasi.' });
   }
+});
+
+// 7.0 Storage Status (Admin - Protected)
+app.get('/api/admin/storage-status', requireAdminAuthAPI, (req, res) => {
+  const status = getStorageStatus();
+  res.json({ success: true, ...status });
 });
 
 // 7.1 Fetch WhatsApp Groups from Fonnte (Super Admin - Protected)
