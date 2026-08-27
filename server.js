@@ -17,6 +17,7 @@ const {
   updateTicketStatusAsync,
   updateTicketWaStatus,
   updateTicketWaStatusAsync,
+  appendTelegramMessagesAsync,
   clearAllTickets,
   clearAllTicketsAsync,
   getStorageStatus,
@@ -596,6 +597,11 @@ app.post('/api/call', callRateLimiter, async (req, res) => {
       details: { waResult: waRes, teleResult: teleRes }
     }).catch(() => {});
 
+    // Save Telegram message IDs for auto-deletion upon ticket completion
+    if (teleRes && Array.isArray(teleRes.telegramMessages) && teleRes.telegramMessages.length > 0) {
+      await appendTelegramMessagesAsync(ticket.id, teleRes.telegramMessages).catch(() => {});
+    }
+
     // Respond to client caller
     res.json({
       success: true,
@@ -671,6 +677,10 @@ app.post('/api/tickets/:id/claim', async (req, res) => {
     ticket: updatedTicket,
     newStatus: 'Diproses',
     handledBy: safeStaffName
+  }).then(res => {
+    if (res && Array.isArray(res.telegramMessages) && res.telegramMessages.length > 0) {
+      appendTelegramMessagesAsync(updatedTicket.id, res.telegramMessages).catch(() => {});
+    }
   }).catch(e => console.error('Telegram broadcast error:', e));
 
   res.json({

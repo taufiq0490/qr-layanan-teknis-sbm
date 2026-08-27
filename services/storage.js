@@ -319,7 +319,8 @@ async function createTicketAsync(room, category = "Umum", notes = "") {
       sent: false,
       timestamp: null,
       details: null
-    }
+    },
+    telegramMessages: [] // Array of { chatId, messageId }
   };
   tickets.unshift(newTicket);
   await saveTicketsAsync(tickets);
@@ -349,7 +350,8 @@ function createTicket(room, category = "Umum", notes = "") {
       sent: false,
       timestamp: null,
       details: null
-    }
+    },
+    telegramMessages: [] // Array of { chatId, messageId }
   };
   tickets.unshift(newTicket);
   saveTickets(tickets);
@@ -452,6 +454,52 @@ function updateTicketWaStatus(id, waStatus) {
   return null;
 }
 
+async function appendTelegramMessagesAsync(id, newMessages) {
+  if (!Array.isArray(newMessages) || newMessages.length === 0) return null;
+  const tickets = await readTicketsAsync();
+  const ticket = tickets.find(t => t.id === id);
+  if (ticket) {
+    if (!Array.isArray(ticket.telegramMessages)) {
+      ticket.telegramMessages = [];
+    }
+    for (const msg of newMessages) {
+      if (msg && msg.chatId && msg.messageId) {
+        const exists = ticket.telegramMessages.some(m => m.chatId === msg.chatId && m.messageId === msg.messageId);
+        if (!exists) {
+          ticket.telegramMessages.push(msg);
+        }
+      }
+    }
+    ticket.updatedAt = new Date().toISOString();
+    await saveTicketsAsync(tickets);
+    return ticket;
+  }
+  return null;
+}
+
+function appendTelegramMessages(id, newMessages) {
+  if (!Array.isArray(newMessages) || newMessages.length === 0) return null;
+  const tickets = readTickets();
+  const ticket = tickets.find(t => t.id === id);
+  if (ticket) {
+    if (!Array.isArray(ticket.telegramMessages)) {
+      ticket.telegramMessages = [];
+    }
+    for (const msg of newMessages) {
+      if (msg && msg.chatId && msg.messageId) {
+        const exists = ticket.telegramMessages.some(m => m.chatId === msg.chatId && m.messageId === msg.messageId);
+        if (!exists) {
+          ticket.telegramMessages.push(msg);
+        }
+      }
+    }
+    ticket.updatedAt = new Date().toISOString();
+    saveTickets(tickets);
+    return ticket;
+  }
+  return null;
+}
+
 async function clearAllTicketsAsync() {
   inMemoryTickets = [];
   await saveTicketsAsync([]);
@@ -482,6 +530,8 @@ module.exports = {
   updateTicketStatusAsync,
   updateTicketWaStatus,
   updateTicketWaStatusAsync,
+  appendTelegramMessages,
+  appendTelegramMessagesAsync,
   clearAllTickets,
   clearAllTicketsAsync,
   testKvConnection,

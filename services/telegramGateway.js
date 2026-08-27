@@ -83,11 +83,58 @@ async function sendTelegramAlert({ room, category, notes, ticketId }) {
 
   const results = await Promise.all(sendPromises);
   const allSuccess = results.some(r => r.success);
+
+  const telegramMessages = results
+    .filter(r => r.success && r.data && r.data.result && r.data.result.message_id)
+    .map(r => ({
+      chatId: String(r.data.result.chat?.id || r.chatId),
+      messageId: r.data.result.message_id
+    }));
+
   return {
     success: allSuccess,
     provider: 'telegram',
+    telegramMessages,
     results
   };
+}
+
+/**
+ * Delete previously dispatched Telegram messages for a ticket (Opsi 1 - Auto Clean)
+ */
+async function deleteTelegramMessages(ticket) {
+  const config = readConfig();
+  const teleConfig = config.telegramGateway || {};
+  const botToken = teleConfig.botToken || '';
+  if (!botToken || !ticket || !Array.isArray(ticket.telegramMessages) || ticket.telegramMessages.length === 0) {
+    return { success: true, count: 0 };
+  }
+
+  console.log(`[Telegram Gateway] Deleting ${ticket.telegramMessages.length} message(s) for Ticket #${ticket.id.slice(-6)}...`);
+
+  const deletePromises = ticket.telegramMessages.map(async (msg) => {
+    if (!msg || !msg.chatId || !msg.messageId) return { success: false };
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${botToken}/deleteMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(5000),
+        body: JSON.stringify({
+          chat_id: String(msg.chatId).trim(),
+          message_id: msg.messageId
+        })
+      });
+      const data = await res.json();
+      console.log(`[Telegram deleteMessage] Deleted message ID ${msg.messageId} from chat ${msg.chatId}: ${data.ok ? 'OK' : data.description}`);
+      return { chatId: msg.chatId, messageId: msg.messageId, success: data.ok, data };
+    } catch (e) {
+      console.warn(`[Telegram deleteMessage error for ${msg.chatId}#${msg.messageId}]:`, e.message);
+      return { chatId: msg.chatId, messageId: msg.messageId, success: false, error: e.message };
+    }
+  });
+
+  const results = await Promise.all(deletePromises);
+  return { success: results.some(r => r.success), results };
 }
 
 /**
@@ -103,6 +150,12 @@ async function sendTelegramStatusUpdate({ ticket, newStatus, handledBy }) {
     return { success: true, mode: 'simulation' };
   }
 
+  // Opsi 1: Jika tiket SELESAI, otomatis HAPUS semua pesan panggilan tiket ini dari grup Telegram!
+  if (newStatus === 'Selesai') {
+    const delResult = await deleteTelegramMessages(ticket);
+    return { success: true, deleted: true, delResult };
+  }
+
   const now = new Date();
   const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }) + " WIB";
   const staffName = handledBy || ticket.handledBy || 'Tim Support';
@@ -110,17 +163,6 @@ async function sendTelegramStatusUpdate({ ticket, newStatus, handledBy }) {
 
   let updateText = '';
   let replyMarkup = null;
-
-  function formatDuration(seconds) {
-    if (!seconds || seconds <= 0) return '< 1 menit';
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    if (m === 0) return `${s} detik`;
-    if (m < 60) return s > 0 ? `${m} menit ${s} detik` : `${m} menit`;
-    const h = Math.floor(m / 60);
-    const remM = m % 60;
-    return remM > 0 ? `${h} jam ${remM} menit` : `${h} jam`;
-  }
 
   if (newStatus === 'Diproses') {
     updateText = `🔵 <b>UPDATE: TIKET SEDANG DIPROSES</b>\n\n` +
@@ -141,17 +183,6 @@ async function sendTelegramStatusUpdate({ ticket, newStatus, handledBy }) {
         ]
       ]
     };
-  } else if (newStatus === 'Selesai') {
-    const durText = ticket.resolutionTimeSeconds ? formatDuration(ticket.resolutionTimeSeconds) : '-';
-
-    updateText = `🟢 <b>UPDATE: KENDALA SELESAI DITANGANI</b>\n\n` +
-      `📍 <b>Ruangan:</b> ${ticket.room}\n` +
-      `📌 <b>Kendala:</b> ${ticket.category || 'Umum'}\n` +
-      `👤 <b>Petugas:</b> ${staffName}\n` +
-      `⏱️ <b>Durasi Pengerjaan:</b> ${durText}\n` +
-      `🕒 <b>Waktu Selesai:</b> ${timeStr}\n` +
-      `🆔 <b>ID Tiket:</b> <code>${shortId}</code>\n\n` +
-      `<i>✨ Pekerjaan telah selesai dilaksanakan.</i>`;
   } else {
     return { success: true };
   }
@@ -182,10 +213,18 @@ async function sendTelegramStatusUpdate({ ticket, newStatus, handledBy }) {
     });
 
   const results = await Promise.all(sendPromises);
-  return { success: results.some(r => r.success), results };
+  const telegramMessages = results
+    .filter(r => r.success && r.data && r.data.result && r.data.result.message_id)
+    .map(r => ({
+      chatId: String(r.data.result.chat?.id || r.chatId),
+      messageId: r.data.result.message_id
+    }));
+
+  return { success: results.some(r => r.success), telegramMessages, results };
 }
 
 module.exports = {
   sendTelegramAlert,
-  sendTelegramStatusUpdate
+  sendTelegramStatusUpdate,
+  deleteTelegramMessages
 };
