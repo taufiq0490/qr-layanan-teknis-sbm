@@ -48,38 +48,40 @@ async function sendTelegramAlert({ room, category, notes, ticketId }) {
 
   console.log(`[Telegram Gateway] Sending alert for Room "${room}" to ${chatIds.length} target(s)...`);
 
-  const results = [];
-  for (const chatId of chatIds) {
-    if (!chatId || !chatId.trim()) continue;
-    try {
-      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId.trim(),
-          text: formattedText,
-          parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: '🚀 Klaim & Tangani Tiket',
-                  url: claimUrl
-                }
+  const sendPromises = chatIds
+    .filter(chatId => chatId && typeof chatId === 'string' && chatId.trim() !== '')
+    .map(async (chatId) => {
+      try {
+        const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(6000), // 6 seconds timeout
+          body: JSON.stringify({
+            chat_id: chatId.trim(),
+            text: formattedText,
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: '🚀 Klaim & Tangani Tiket',
+                    url: claimUrl
+                  }
+                ]
               ]
-            ]
-          }
-        })
-      });
+            }
+          })
+        });
 
-      const data = await response.json();
-      results.push({ chatId, success: data.ok, data });
-    } catch (err) {
-      console.error(`[Telegram Gateway Error for ${chatId}]:`, err);
-      results.push({ chatId, success: false, error: err.message });
-    }
-  }
+        const data = await response.json();
+        return { chatId, success: data.ok, data };
+      } catch (err) {
+        console.error(`[Telegram Gateway Error for ${chatId}]:`, err.message);
+        return { chatId, success: false, error: err.message };
+      }
+    });
 
+  const results = await Promise.all(sendPromises);
   const allSuccess = results.some(r => r.success);
   return {
     success: allSuccess,
@@ -154,30 +156,32 @@ async function sendTelegramStatusUpdate({ ticket, newStatus, handledBy }) {
     return { success: true };
   }
 
-  const results = [];
-  for (const chatId of chatIds) {
-    if (!chatId || !chatId.trim()) continue;
-    try {
-      const payload = {
-        chat_id: chatId.trim(),
-        text: updateText,
-        parse_mode: 'HTML'
-      };
-      if (replyMarkup) payload.reply_markup = replyMarkup;
+  const sendPromises = chatIds
+    .filter(chatId => chatId && typeof chatId === 'string' && chatId.trim() !== '')
+    .map(async (chatId) => {
+      try {
+        const payload = {
+          chat_id: chatId.trim(),
+          text: updateText,
+          parse_mode: 'HTML'
+        };
+        if (replyMarkup) payload.reply_markup = replyMarkup;
 
-      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await response.json();
-      results.push({ chatId, success: data.ok, data });
-    } catch (err) {
-      console.error(`[Telegram Status Update Error for ${chatId}]:`, err);
-      results.push({ chatId, success: false, error: err.message });
-    }
-  }
+        const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(6000),
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        return { chatId, success: data.ok, data };
+      } catch (err) {
+        console.error(`[Telegram Status Update Error for ${chatId}]:`, err.message);
+        return { chatId, success: false, error: err.message };
+      }
+    });
 
+  const results = await Promise.all(sendPromises);
   return { success: results.some(r => r.success), results };
 }
 

@@ -116,21 +116,26 @@ function readTickets() {
     const targetPath = isVercel && fs.existsSync(TMP_TICKETS_PATH) ? TMP_TICKETS_PATH : TICKETS_PATH;
     if (fs.existsSync(targetPath)) {
       const data = fs.readFileSync(targetPath, 'utf-8');
-      inMemoryTickets = JSON.parse(data);
-      return inMemoryTickets;
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed)) {
+        inMemoryTickets = parsed;
+        return inMemoryTickets;
+      }
     }
-    if (inMemoryTickets) return inMemoryTickets;
+    if (Array.isArray(inMemoryTickets)) return inMemoryTickets;
     inMemoryTickets = [];
     return inMemoryTickets;
   } catch (err) {
     console.error("Error reading tickets:", err);
-    return inMemoryTickets || [];
+    if (Array.isArray(inMemoryTickets)) return inMemoryTickets;
+    inMemoryTickets = [];
+    return inMemoryTickets;
   }
 }
 
 async function readTicketsAsync() {
   const cloudTickets = await getKvTickets();
-  if (cloudTickets !== null) {
+  if (cloudTickets !== null && Array.isArray(cloudTickets) && cloudTickets.length > 0) {
     inMemoryTickets = cloudTickets;
     return cloudTickets;
   }
@@ -138,6 +143,7 @@ async function readTicketsAsync() {
 }
 
 function saveTickets(tickets) {
+  if (!Array.isArray(tickets)) tickets = [];
   inMemoryTickets = tickets;
   // Trigger background KV sync if configured
   setKvTickets(tickets).catch(() => {});
@@ -152,6 +158,7 @@ function saveTickets(tickets) {
 }
 
 async function saveTicketsAsync(tickets) {
+  if (!Array.isArray(tickets)) tickets = [];
   inMemoryTickets = tickets;
   await setKvTickets(tickets);
   try {

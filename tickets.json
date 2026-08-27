@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "id": "TICK-MTBPW0PX-271",
+    "room": "Kirana Megatara 1",
+    "category": "Mic/Audio",
+    "notes": "Test audio fix",
+    "status": "Menunggu",
+    "handledBy": "",
+    "createdAt": "2026-08-27T16:08:30.116Z",
+    "claimedAt": null,
+    "completedAt": null,
+    "resolutionTimeSeconds": null,
+    "updatedAt": "2026-08-27T16:08:30.116Z",
+    "waStatus": {
+      "sent": false,
+      "timestamp": null,
+      "details": null
+    }
+  }
+]

@@ -225,18 +225,52 @@ async function handleLogout() {
   }
 }
 
-// SSE Real-time Events Listener
+// SSE Real-time Events Listener (Instant 0ms push)
 function setupRealtimeEvents() {
   if (!window.EventSource) return;
   try {
     const es = new EventSource('/api/events');
     es.addEventListener('new_ticket', (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        if (payload && payload.ticket) {
+          const exists = latestLoadedTickets.some(t => t.id === payload.ticket.id);
+          if (!exists) {
+            latestLoadedTickets.unshift(payload.ticket);
+            const waitingCount = latestLoadedTickets.filter(t => t.status === 'Menunggu').length;
+            if (window.SoundNotifier && payload.ticket.status === 'Menunggu') {
+              if (window.SoundNotifier.loopEnabled) {
+                window.SoundNotifier.startContinuousAlert(waitingCount);
+              } else {
+                window.SoundNotifier.playIncomingCallSound();
+              }
+              window.SoundNotifier.showDesktopNotification(
+                `🚨 Panggilan Baru: Ruang ${payload.ticket.room}`,
+                `Kendala: ${payload.ticket.category || 'Dukungan Teknis'}\nCatatan: ${payload.ticket.notes || '-'}`
+              );
+              window.SoundNotifier.startTitleBlink(`🚨 (${waitingCount}) Panggilan Ruang ${payload.ticket.room}`);
+            }
+          }
+        }
+      } catch (err) {}
       loadTickets();
     });
+
     es.addEventListener('ticket_updated', (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        if (payload && payload.ticket) {
+          const idx = latestLoadedTickets.findIndex(t => t.id === payload.ticket.id);
+          if (idx !== -1) {
+            latestLoadedTickets[idx] = payload.ticket;
+          }
+        }
+      } catch (err) {}
       loadTickets();
     });
+
     es.addEventListener('tickets_cleared', () => {
+      latestLoadedTickets = [];
       loadTickets();
     });
   } catch (e) {
@@ -244,9 +278,12 @@ function setupRealtimeEvents() {
   }
 }
 
+let latestTicketRequestSeq = 0;
+
 async function loadTickets() {
+  const thisSeq = ++latestTicketRequestSeq;
   try {
-    const res = await fetch(`/api/tickets?_t=${Date.now()}`, {
+    const res = await fetch(`/api/tickets?_t=${Date.now()}&_seq=${thisSeq}`, {
       cache: 'no-store',
       headers: getAuthHeaders()
     });
@@ -256,9 +293,14 @@ async function loadTickets() {
     }
     const data = await res.json();
     
-    if (!data.success) return;
+    // Guard against out-of-order async responses (discard older requests)
+    if (thisSeq < latestTicketRequestSeq) {
+      return;
+    }
 
-    const tickets = data.tickets || [];
+    if (!data.success || !Array.isArray(data.tickets)) return;
+
+    const tickets = data.tickets;
     latestLoadedTickets = tickets;
     const waitingTickets = tickets.filter(t => t.status === 'Menunggu');
     const waitingCount = waitingTickets.length;

@@ -133,6 +133,7 @@ async function sendClassroomAlert({ room, category, notes, ticketId }) {
           'Authorization': waConfig.fonnteToken,
           'Content-Type': 'application/json'
         },
+        signal: AbortSignal.timeout(6000), // 6s timeout
         body: JSON.stringify({
           target: normalizedTargets,
           message: fullMessage,

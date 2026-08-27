@@ -545,38 +545,33 @@ app.post('/api/call', callRateLimiter, async (req, res) => {
     // Broadcast realtime event instantly to all open admin dashboards (0ms delay)
     broadcastRealtimeEvent('new_ticket', { ticket });
 
-    // Send notifications based on configured channel (wa, telegram, or both)
+    // Send notifications based on configured channel in PARALLEL
     const channel = config.notificationChannel || 'both';
-
-    let waResult = { success: false, mode: 'skipped' };
-    let teleResult = { success: false, mode: 'skipped' };
+    const dispatchPromises = [];
 
     if (channel === 'both' || channel === 'fonnte' || channel === 'wa') {
-      waResult = await sendClassroomAlert({
-        room: safeRoom,
-        category: safeCategory,
-        notes: safeNotes,
-        ticketId: ticket.id
-      });
+      dispatchPromises.push(
+        sendClassroomAlert({
+          room: safeRoom,
+          category: safeCategory,
+          notes: safeNotes,
+          ticketId: ticket.id
+        }).catch(err => ({ success: false, error: err.message, provider: 'fonnte' }))
+      );
     }
 
     if (channel === 'both' || channel === 'telegram') {
-      teleResult = await sendTelegramAlert({
-        room: safeRoom,
-        category: safeCategory,
-        notes: safeNotes,
-        ticketId: ticket.id
-      });
+      dispatchPromises.push(
+        sendTelegramAlert({
+          room: safeRoom,
+          category: safeCategory,
+          notes: safeNotes,
+          ticketId: ticket.id
+        }).catch(err => ({ success: false, error: err.message, provider: 'telegram' }))
+      );
     }
 
-    // Update ticket with notification dispatch result
-    await updateTicketWaStatusAsync(ticket.id, {
-      sent: waResult.success || teleResult.success,
-      provider: channel,
-      timestamp: new Date().toISOString(),
-      details: { waResult, teleResult }
-    });
-
+    // Respond immediately to client caller (0ms lag on HP Dosen)
     res.json({
       success: true,
       message: `Panggilan bantuan untuk ruang ${safeRoom} telah diterima dan diteruskan ke tim staf support.`,
@@ -588,13 +583,20 @@ app.post('/api/call', callRateLimiter, async (req, res) => {
         createdAt: ticket.createdAt,
         status: ticket.status,
         handledBy: ticket.handledBy || ""
-      },
-      dispatch: {
-        channel,
-        wa: waResult,
-        telegram: teleResult
       }
     });
+
+    // Run notifications concurrently in background & update delivery status
+    Promise.all(dispatchPromises).then(async (results) => {
+      const waRes = results.find(r => r && (r.provider === 'fonnte' || r.mode === 'simulation')) || { success: false };
+      const teleRes = results.find(r => r && (r.provider === 'telegram')) || { success: false };
+      await updateTicketWaStatusAsync(ticket.id, {
+        sent: results.some(r => r && r.success),
+        provider: channel,
+        timestamp: new Date().toISOString(),
+        details: { waResult: waRes, teleResult: teleRes }
+      });
+    }).catch(e => console.error('Background dispatch error:', e));
   } catch (error) {
     console.error('Error handling /api/call:', error);
     res.status(500).json({ success: false, error: error.message || 'Terjadi kesalahan sistem' });
@@ -690,6 +692,11 @@ app.post('/api/tickets/:id/complete', async (req, res) => {
 
 // 4. Get Tickets (Admin / Monitoring - Protected)
 app.get('/api/tickets', requireAdminAuthAPI, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+
   const { status, limit } = req.query;
   let tickets = await readTicketsAsync();
 
