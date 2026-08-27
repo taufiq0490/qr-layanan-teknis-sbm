@@ -41,43 +41,48 @@
       </div>
     </div>
 
-    <!-- Header Actions (No print) -->
+    <!-- Header Actions (Compact, No print) -->
     <div class="reports-header no-print">
       <div>
-        <h2 style="font-size: 1.5rem; color: var(--primary); font-weight: 800; margin-bottom: 4px;">
+        <h2 style="font-size: 1.25rem; color: var(--primary); font-weight: 800; margin-bottom: 2px;">
           📈 Rekapitulasi & Analitik Layanan Teknis
         </h2>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">
+        <p style="color: var(--text-muted); font-size: 0.8rem;">
           Analisis frekuensi kendala, performa penanganan, dan ekspor laporan berkala.
         </p>
       </div>
       <div class="export-actions">
-        <button class="btn btn-outline" id="btnExportExcel" style="background: white; border-color: #059669; color: #059669; font-weight: 700;">
+        <button class="btn btn-outline" id="btnExportExcel" style="background: white; border-color: #059669; color: #059669; font-weight: 700; padding: 6px 12px; font-size: 0.82rem;">
           📑 Unduh Excel / CSV
         </button>
-        <button class="btn btn-primary" id="btnExportPDF" style="font-weight: 700;">
+        <button class="btn btn-primary" id="btnExportPDF" style="font-weight: 700; padding: 6px 12px; font-size: 0.82rem;">
           📄 Cetak / Ekspor PDF
         </button>
       </div>
     </div>
 
-    <!-- Filter Box (No print) -->
+    <!-- Filter Box (Compact Single Card, No print) -->
     <div class="filter-box no-print">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
-        <span style="font-size: 0.95rem; font-weight: 700; color: var(--primary);">
-          🔍 Filter Periode & Kriteria Laporan
-        </span>
-        <!-- Quick Preset Buttons -->
-        <div class="btn-group">
-          <button class="btn-filter active" data-period="all">Semua</button>
-          <button class="btn-filter" data-period="today">Hari Ini</button>
-          <button class="btn-filter" data-period="7days">7 Hari Terakhir</button>
-          <button class="btn-filter" data-period="30days">30 Hari Terakhir</button>
-          <button class="btn-filter" data-period="thismonth">Bulan Ini</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid #F1F5F9;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span style="font-size: 0.82rem; font-weight: 700; color: var(--primary);">
+            🔍 Filter Periode:
+          </span>
+          <!-- Quick Preset Buttons -->
+          <div class="btn-group">
+            <button class="btn-filter active" data-period="all">Semua</button>
+            <button class="btn-filter" data-period="today">Hari Ini</button>
+            <button class="btn-filter" data-period="7days">7 Hari</button>
+            <button class="btn-filter" data-period="30days">30 Hari</button>
+            <button class="btn-filter" data-period="thismonth">Bulan Ini</button>
+          </div>
         </div>
+        <button class="btn btn-outline" id="btnResetFilter" style="padding: 4px 10px; font-size: 0.78rem; height: 28px; border-radius: 6px;">
+          🔄 Reset Filter
+        </button>
       </div>
 
-      <div class="filter-grid">
+      <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
         <div class="filter-item">
           <label for="startDate">Dari Tanggal</label>
           <input type="date" id="startDate" class="filter-input">
@@ -107,54 +112,59 @@
             <option value="Menunggu">Menunggu</option>
           </select>
         </div>
-        <div class="filter-item" style="justify-content: flex-end;">
-          <button class="btn btn-outline" id="btnResetFilter" style="padding: 8px 12px; font-size: 0.85rem; height: 38px;">
-            🔄 Reset Filter
-          </button>
-        </div>
       </div>
     </div>
 
-    <!-- KPI Summary Row -->
-    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+    <!-- KPI Summary Row (Compact 5 Cards in 1 Row) -->
+    <div class="stats-grid">
+      <!-- 1. Total Panggilan -->
       <div class="stat-card">
-        <div>
-          <div class="stat-label">Total Panggilan</div>
-          <div class="stat-number" id="kpiTotal">0</div>
+        <div class="stat-card-content">
+          <span class="stat-label">Total Panggilan</span>
+          <span class="stat-number" id="kpiTotal">0</span>
+          <span class="stat-sub" style="color: var(--text-muted);">tiket tercatat</span>
         </div>
-        <div style="font-size: 2rem;">📋</div>
+        <div class="stat-icon">📋</div>
       </div>
+
+      <!-- 2. Terselesaikan -->
       <div class="stat-card">
-        <div>
-          <div class="stat-label">Terselesaikan</div>
-          <div class="stat-number" style="color: #059669;" id="kpiSelesai">0</div>
-          <span style="font-size: 0.75rem; font-weight: 600; color: #059669;" id="kpiRate">0% rasio selesai</span>
+        <div class="stat-card-content">
+          <span class="stat-label">Terselesaikan</span>
+          <span class="stat-number" style="color: #059669;" id="kpiSelesai">0</span>
+          <span class="stat-sub" style="color: #059669;" id="kpiRate">0% rasio selesai</span>
         </div>
-        <div style="font-size: 2rem;">✅</div>
+        <div class="stat-icon">✅</div>
       </div>
+
+      <!-- 3. Rata-rata Durasi Penanganan -->
       <div class="stat-card">
-        <div>
-          <div class="stat-label">Rata-rata Durasi Penanganan</div>
-          <div class="stat-number" style="color: #2563EB; font-size: 1.3rem;" id="kpiAvgDuration">-</div>
-          <span style="font-size: 0.75rem; color: var(--text-muted);" id="kpiAvgDurationSubtitle">dari tiket selesai</span>
+        <div class="stat-card-content">
+          <span class="stat-label">Rata-rata Durasi</span>
+          <span class="stat-number" style="color: #2563EB; font-size: 1.15rem;" id="kpiAvgDuration">-</span>
+          <span class="stat-sub" style="color: var(--text-muted);" id="kpiAvgDurationSubtitle">tiket selesai</span>
         </div>
-        <div style="font-size: 2rem;">⏱️</div>
+        <div class="stat-icon">⏱️</div>
       </div>
+
+      <!-- 4. Ruangan Teraktif -->
       <div class="stat-card">
-        <div>
-          <div class="stat-label">Ruangan Teraktif</div>
-          <div class="stat-number" style="font-size: 1.3rem; color: var(--primary);" id="kpiTopRoom">-</div>
-          <span style="font-size: 0.75rem; color: var(--text-muted);" id="kpiTopRoomCount">0 panggilan</span>
+        <div class="stat-card-content">
+          <span class="stat-label">Ruang Teraktif</span>
+          <span class="stat-number" style="font-size: 1.05rem; color: var(--primary);" id="kpiTopRoom">-</span>
+          <span class="stat-sub" style="color: var(--text-muted);" id="kpiTopRoomCount">0 panggilan</span>
         </div>
-        <div style="font-size: 2rem;">📍</div>
+        <div class="stat-icon">📍</div>
       </div>
+
+      <!-- 5. Kendala Terbanyak -->
       <div class="stat-card">
-        <div>
-          <div class="stat-label">Kendala Terbanyak</div>
-          <div class="stat-number" style="font-size: 1.3rem; color: #D97706;" id="kpiTopCategory">-</div>
-          <span style="font-size: 0.75rem; color: var(--text-muted);" id="kpiTopCategoryCount">0 laporan</span>
+        <div class="stat-card-content">
+          <span class="stat-label">Kendala Utama</span>
+          <span class="stat-number" style="font-size: 1.05rem; color: #D97706;" id="kpiTopCategory">-</span>
+          <span class="stat-sub" style="color: var(--text-muted);" id="kpiTopCategoryCount">0 laporan</span>
         </div>
-        <div style="font-size: 2rem;">⚠️</div>
+        <div class="stat-icon">⚠️</div>
       </div>
     </div>
 
