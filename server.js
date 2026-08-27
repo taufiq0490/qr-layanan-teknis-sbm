@@ -6,12 +6,19 @@ const {
   readConfig,
   saveConfig,
   readTickets,
+  readTicketsAsync,
   saveTickets,
+  saveTicketsAsync,
   getTicketById,
+  getTicketByIdAsync,
   createTicket,
+  createTicketAsync,
   updateTicketStatus,
+  updateTicketStatusAsync,
   updateTicketWaStatus,
+  updateTicketWaStatusAsync,
   clearAllTickets,
+  clearAllTicketsAsync,
   sanitizeString
 } = require('./services/storage');
 const { sendClassroomAlert, fetchWhatsAppGroups } = require('./services/waGateway');
@@ -42,6 +49,56 @@ const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Anti-caching middleware for all API endpoints
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
+// --- REALTIME SERVER-SENT EVENTS (SSE) SYSTEM ---
+const sseClients = new Set();
+
+function broadcastRealtimeEvent(eventType, data) {
+  const payload = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.write(payload);
+    } catch (e) {
+      sseClients.delete(client);
+    }
+  }
+}
+
+// SSE stream endpoint
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  sseClients.add(res);
+
+  // Initial ping
+  res.write(`event: connected\ndata: ${JSON.stringify({ time: Date.now() })}\n\n`);
+
+  // Heartbeat every 20s
+  const keepAlive = setInterval(() => {
+    try {
+      res.write(': keepalive\n\n');
+    } catch (e) {
+      clearInterval(keepAlive);
+      sseClients.delete(res);
+    }
+  }, 20000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    sseClients.delete(res);
+  });
+});
 
 // --- RATE LIMITING MIDDLEWARE ---
 // Limit: max 3 calls per 2 minutes (120,000 ms) per IP & Room
@@ -322,9 +379,9 @@ app.get('/api/info', (req, res) => {
 });
 
 // 1.1 Public Live CSV Data for Google Sheets =IMPORTDATA(...)
-app.get('/api/public/reports-csv', (req, res) => {
+app.get('/api/public/reports-csv', async (req, res) => {
   try {
-    const tickets = readTickets() || [];
+    const tickets = (await readTicketsAsync()) || [];
     const headers = [
       'No',
       'ID Tiket',
@@ -483,7 +540,10 @@ app.post('/api/call', callRateLimiter, async (req, res) => {
     const safeNotes = sanitizeString(notes) || '';
     
     // Create new ticket record
-    const ticket = createTicket(safeRoom, safeCategory, safeNotes);
+    const ticket = await createTicketAsync(safeRoom, safeCategory, safeNotes);
+
+    // Broadcast realtime event instantly to all open admin dashboards (0ms delay)
+    broadcastRealtimeEvent('new_ticket', { ticket });
 
     // Send notifications based on configured channel (wa, telegram, or both)
     const channel = config.notificationChannel || 'both';
@@ -510,7 +570,7 @@ app.post('/api/call', callRateLimiter, async (req, res) => {
     }
 
     // Update ticket with notification dispatch result
-    updateTicketWaStatus(ticket.id, {
+    await updateTicketWaStatusAsync(ticket.id, {
       sent: waResult.success || teleResult.success,
       provider: channel,
       timestamp: new Date().toISOString(),
@@ -542,9 +602,9 @@ app.post('/api/call', callRateLimiter, async (req, res) => {
 });
 
 // 3. Public Ticket Status (for Live Tracking on HP Dosen/Caller)
-app.get('/api/tickets/:id', (req, res) => {
+app.get('/api/tickets/:id', async (req, res) => {
   const { id } = req.params;
-  const ticket = getTicketById(id);
+  const ticket = await getTicketByIdAsync(id);
   if (!ticket) {
     return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan.' });
   }
@@ -577,11 +637,14 @@ app.post('/api/tickets/:id/claim', async (req, res) => {
   }
 
   const safeStaffName = sanitizeString(staffName.trim());
-  const updatedTicket = updateTicketStatus(id, 'Diproses', safeStaffName);
+  const updatedTicket = await updateTicketStatusAsync(id, 'Diproses', safeStaffName);
 
   if (!updatedTicket) {
     return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan.' });
   }
+
+  // Broadcast realtime event instantly to dashboards
+  broadcastRealtimeEvent('ticket_updated', { ticket: updatedTicket });
 
   // Broadcast status update to Telegram group in background
   sendTelegramStatusUpdate({
@@ -603,10 +666,13 @@ app.post('/api/tickets/:id/complete', async (req, res) => {
   const { staffName } = req.body;
   const safeStaffName = staffName ? sanitizeString(staffName.trim()) : undefined;
 
-  const updatedTicket = updateTicketStatus(id, 'Selesai', safeStaffName);
+  const updatedTicket = await updateTicketStatusAsync(id, 'Selesai', safeStaffName);
   if (!updatedTicket) {
     return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan.' });
   }
+
+  // Broadcast realtime event instantly to dashboards
+  broadcastRealtimeEvent('ticket_updated', { ticket: updatedTicket });
 
   // Broadcast completion update to Telegram group in background
   sendTelegramStatusUpdate({
@@ -623,9 +689,9 @@ app.post('/api/tickets/:id/complete', async (req, res) => {
 });
 
 // 4. Get Tickets (Admin / Monitoring - Protected)
-app.get('/api/tickets', requireAdminAuthAPI, (req, res) => {
+app.get('/api/tickets', requireAdminAuthAPI, async (req, res) => {
   const { status, limit } = req.query;
-  let tickets = readTickets();
+  let tickets = await readTicketsAsync();
 
   if (status && status !== 'all') {
     tickets = tickets.filter(t => t.status.toLowerCase() === status.toLowerCase());
@@ -647,10 +713,13 @@ app.patch('/api/tickets/:id/status', requireAdminAuthAPI, async (req, res) => {
     return res.status(400).json({ success: false, error: 'Status tidak valid' });
   }
 
-  const updatedTicket = updateTicketStatus(id, status, handledBy);
+  const updatedTicket = await updateTicketStatusAsync(id, status, handledBy);
   if (!updatedTicket) {
     return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan' });
   }
+
+  // Broadcast realtime event instantly to dashboards
+  broadcastRealtimeEvent('ticket_updated', { ticket: updatedTicket });
 
   // Broadcast status update to Telegram group in background
   if (['Diproses', 'Selesai'].includes(status)) {
@@ -665,9 +734,10 @@ app.patch('/api/tickets/:id/status', requireAdminAuthAPI, async (req, res) => {
 });
 
 // 5.1 Clear all tickets (Super Admin - Protected)
-app.post('/api/admin/clear-tickets', requireSuperAdminAuthAPI, (req, res) => {
+app.post('/api/admin/clear-tickets', requireSuperAdminAuthAPI, async (req, res) => {
   try {
-    clearAllTickets();
+    await clearAllTicketsAsync();
+    broadcastRealtimeEvent('tickets_cleared', {});
     res.json({ success: true, message: 'Seluruh riwayat tiket berhasil dikosongkan.' });
   } catch (err) {
     console.error('Error clearing tickets:', err);

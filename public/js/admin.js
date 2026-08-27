@@ -225,9 +225,29 @@ async function handleLogout() {
   }
 }
 
+// SSE Real-time Events Listener
+function setupRealtimeEvents() {
+  if (!window.EventSource) return;
+  try {
+    const es = new EventSource('/api/events');
+    es.addEventListener('new_ticket', (e) => {
+      loadTickets();
+    });
+    es.addEventListener('ticket_updated', (e) => {
+      loadTickets();
+    });
+    es.addEventListener('tickets_cleared', () => {
+      loadTickets();
+    });
+  } catch (e) {
+    console.warn('Realtime SSE error:', e);
+  }
+}
+
 async function loadTickets() {
   try {
-    const res = await fetch('/api/tickets', {
+    const res = await fetch(`/api/tickets?_t=${Date.now()}`, {
+      cache: 'no-store',
       headers: getAuthHeaders()
     });
     if (res.status === 401) {
@@ -452,11 +472,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Inisialisasi UI Audio Controls
   updateAudioControlsUI();
 
+  // Inisialisasi Koneksi Realtime SSE (Instant Push Notification 0ms)
+  setupRealtimeEvents();
+
   // Load Data Tiket
   loadTickets();
 
-  // Fast real-time polling interval (2.5 detik)
-  setInterval(loadTickets, 2500);
+  // Fallback Polling interval (2 detik) dengan anti-cache
+  setInterval(loadTickets, 2000);
 
   // Setup Listener Kontrol Audio
   const selectSound = document.getElementById('selectSoundType');

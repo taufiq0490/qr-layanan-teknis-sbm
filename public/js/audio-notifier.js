@@ -327,9 +327,20 @@ class SoundNotifierEngine {
 
       if (ctx.state === 'suspended') {
         this.updateUnlockBannerUI(true);
-        ctx.resume();
+        ctx.resume().then(() => {
+          this._executePlaySound(ctx, customType);
+        }).catch(() => {});
+      } else {
+        this._executePlaySound(ctx, customType);
       }
+    } catch (e) {
+      console.warn('Gagal memutar audio notifikasi:', e);
+    }
+  }
 
+  _executePlaySound(ctx, customType) {
+    if (this.isMuted) return;
+    try {
       const master = this.createMasterGain(ctx);
       const type = customType || this.soundType;
 
@@ -352,7 +363,7 @@ class SoundNotifierEngine {
           break;
       }
     } catch (e) {
-      console.warn('Gagal memutar audio notifikasi:', e);
+      console.warn('Playback error:', e);
     }
   }
 

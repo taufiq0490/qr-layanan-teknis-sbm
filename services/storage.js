@@ -70,8 +70,48 @@ function saveConfig(config) {
   }
 }
 
+// Cloud KV / Upstash Redis REST integration for Vercel
+async function getKvTickets() {
+  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!kvUrl || !kvToken) return null;
+  try {
+    const res = await fetch(`${kvUrl}/get/sbm_tickets`, {
+      headers: { Authorization: `Bearer ${kvToken}` }
+    });
+    const data = await res.json();
+    if (data && data.result) {
+      const parsed = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
+      return Array.isArray(parsed) ? parsed : [];
+    }
+    return [];
+  } catch (e) {
+    console.error("Error reading tickets from Cloud KV:", e);
+    return null;
+  }
+}
+
+async function setKvTickets(tickets) {
+  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!kvUrl || !kvToken) return false;
+  try {
+    await fetch(`${kvUrl}/set/sbm_tickets`, {
+      method: 'POST',
+      headers: { 
+        Authorization: `Bearer ${kvToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(tickets)
+    });
+    return true;
+  } catch (e) {
+    console.error("Error saving tickets to Cloud KV:", e);
+    return false;
+  }
+}
+
 function readTickets() {
-  if (inMemoryTickets) return inMemoryTickets;
   try {
     const targetPath = isVercel && fs.existsSync(TMP_TICKETS_PATH) ? TMP_TICKETS_PATH : TICKETS_PATH;
     if (fs.existsSync(targetPath)) {
@@ -79,6 +119,7 @@ function readTickets() {
       inMemoryTickets = JSON.parse(data);
       return inMemoryTickets;
     }
+    if (inMemoryTickets) return inMemoryTickets;
     inMemoryTickets = [];
     return inMemoryTickets;
   } catch (err) {
@@ -87,8 +128,19 @@ function readTickets() {
   }
 }
 
+async function readTicketsAsync() {
+  const cloudTickets = await getKvTickets();
+  if (cloudTickets !== null) {
+    inMemoryTickets = cloudTickets;
+    return cloudTickets;
+  }
+  return readTickets();
+}
+
 function saveTickets(tickets) {
   inMemoryTickets = tickets;
+  // Trigger background KV sync if configured
+  setKvTickets(tickets).catch(() => {});
   try {
     const targetPath = isVercel ? TMP_TICKETS_PATH : TICKETS_PATH;
     fs.writeFileSync(targetPath, JSON.stringify(tickets, null, 2), 'utf-8');
@@ -97,6 +149,48 @@ function saveTickets(tickets) {
     console.error("Error saving tickets file, stored in memory:", err);
     return true;
   }
+}
+
+async function saveTicketsAsync(tickets) {
+  inMemoryTickets = tickets;
+  await setKvTickets(tickets);
+  try {
+    const targetPath = isVercel ? TMP_TICKETS_PATH : TICKETS_PATH;
+    fs.writeFileSync(targetPath, JSON.stringify(tickets, null, 2), 'utf-8');
+    return true;
+  } catch (err) {
+    return true;
+  }
+}
+
+async function createTicketAsync(room, category = "Umum", notes = "") {
+  const tickets = await readTicketsAsync();
+  const safeRoom = sanitizeString(room);
+  const safeCategory = sanitizeString(category) || "Umum";
+  const safeNotes = sanitizeString(notes);
+  const now = new Date().toISOString();
+
+  const newTicket = {
+    id: "TICK-" + Date.now().toString(36).toUpperCase() + "-" + Math.floor(Math.random() * 1000),
+    room: safeRoom,
+    category: safeCategory,
+    notes: safeNotes,
+    status: "Menunggu",
+    handledBy: "",
+    createdAt: now,
+    claimedAt: null,
+    completedAt: null,
+    resolutionTimeSeconds: null,
+    updatedAt: now,
+    waStatus: {
+      sent: false,
+      timestamp: null,
+      details: null
+    }
+  };
+  tickets.unshift(newTicket);
+  await saveTicketsAsync(tickets);
+  return newTicket;
 }
 
 function createTicket(room, category = "Umum", notes = "") {
@@ -111,7 +205,7 @@ function createTicket(room, category = "Umum", notes = "") {
     room: safeRoom,
     category: safeCategory,
     notes: safeNotes,
-    status: "Menunggu", // 'Menunggu', 'Diproses', 'Selesai'
+    status: "Menunggu",
     handledBy: "",
     createdAt: now,
     claimedAt: null,
@@ -127,6 +221,37 @@ function createTicket(room, category = "Umum", notes = "") {
   tickets.unshift(newTicket);
   saveTickets(tickets);
   return newTicket;
+}
+
+async function updateTicketStatusAsync(id, status, handledBy = "") {
+  const tickets = await readTicketsAsync();
+  const ticket = tickets.find(t => t.id === id);
+  if (ticket) {
+    const now = new Date().toISOString();
+    ticket.status = status;
+    ticket.updatedAt = now;
+
+    if (handledBy !== undefined && handledBy !== null && handledBy !== "") {
+      ticket.handledBy = sanitizeString(handledBy);
+    }
+
+    if (status === 'Diproses' && !ticket.claimedAt) {
+      ticket.claimedAt = now;
+    }
+
+    if (status === 'Selesai') {
+      if (!ticket.completedAt) {
+        ticket.completedAt = now;
+      }
+      const createdTime = new Date(ticket.createdAt).getTime();
+      const completedTime = new Date(ticket.completedAt).getTime();
+      ticket.resolutionTimeSeconds = Math.max(0, Math.round((completedTime - createdTime) / 1000));
+    }
+
+    await saveTicketsAsync(tickets);
+    return ticket;
+  }
+  return null;
 }
 
 function updateTicketStatus(id, status, handledBy = "") {
@@ -160,9 +285,26 @@ function updateTicketStatus(id, status, handledBy = "") {
   return null;
 }
 
+async function getTicketByIdAsync(id) {
+  const tickets = await readTicketsAsync();
+  return tickets.find(t => t.id === id) || null;
+}
+
 function getTicketById(id) {
   const tickets = readTickets();
   return tickets.find(t => t.id === id) || null;
+}
+
+async function updateTicketWaStatusAsync(id, waStatus) {
+  const tickets = await readTicketsAsync();
+  const ticket = tickets.find(t => t.id === id);
+  if (ticket) {
+    ticket.waStatus = waStatus;
+    ticket.updatedAt = new Date().toISOString();
+    await saveTicketsAsync(tickets);
+    return ticket;
+  }
+  return null;
 }
 
 function updateTicketWaStatus(id, waStatus) {
@@ -177,6 +319,12 @@ function updateTicketWaStatus(id, waStatus) {
   return null;
 }
 
+async function clearAllTicketsAsync() {
+  inMemoryTickets = [];
+  await saveTicketsAsync([]);
+  return true;
+}
+
 function clearAllTickets() {
   inMemoryTickets = [];
   saveTickets([]);
@@ -187,11 +335,18 @@ module.exports = {
   readConfig,
   saveConfig,
   readTickets,
+  readTicketsAsync,
   saveTickets,
+  saveTicketsAsync,
   getTicketById,
+  getTicketByIdAsync,
   createTicket,
+  createTicketAsync,
   updateTicketStatus,
+  updateTicketStatusAsync,
   updateTicketWaStatus,
+  updateTicketWaStatusAsync,
   clearAllTickets,
+  clearAllTicketsAsync,
   sanitizeString
 };
