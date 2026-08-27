@@ -155,11 +155,46 @@ function updateRoleBadgeUI(role) {
   }
 }
 
+// --- CLIENT-SIDE PERSISTENCE & SMART CACHE RECONCILIATION ---
+function getCachedTickets() {
+  try {
+    const raw = localStorage.getItem('sbm_tickets_cache');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {}
+  return [];
+}
+
+function saveCachedTickets(tickets) {
+  try {
+    localStorage.setItem('sbm_tickets_cache', JSON.stringify(tickets));
+  } catch (e) {}
+}
+
+function getStoredKnownTicketIds() {
+  try {
+    const raw = localStorage.getItem('sbm_known_ticket_ids');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return new Set(parsed);
+    }
+  } catch (e) {}
+  return new Set();
+}
+
+function saveStoredKnownTicketIds(idSet) {
+  try {
+    localStorage.setItem('sbm_known_ticket_ids', JSON.stringify(Array.from(idSet)));
+  } catch (e) {}
+}
+
 let currentFilter = 'all';
 let previousTicketCount = null;
 let lastRenderedKey = '';
-let knownTicketIds = new Set();
-let latestLoadedTickets = [];
+let knownTicketIds = getStoredKnownTicketIds();
+let latestLoadedTickets = getCachedTickets();
 
 // Helper untuk update tampilan status audio di UI
 function updateAudioControlsUI() {
@@ -177,8 +212,10 @@ function updateAudioControlsUI() {
   const chkLoop = document.getElementById('chkLoopAlarm');
   if (chkLoop) chkLoop.checked = sn.loopEnabled;
 
+  const chkSpeech = document.getElementById('chkVoiceAnnouncement');
+  if (chkSpeech) chkSpeech.checked = sn.isSpeechEnabled !== false;
+
   const statusBadge = document.getElementById('audioStatusBadge');
-  const statusText = document.getElementById('audioStatusText');
   const muteBtnIcon = document.getElementById('muteBtnIcon');
   const muteBtnText = document.getElementById('muteBtnText');
 
@@ -225,6 +262,28 @@ async function handleLogout() {
   }
 }
 
+// Modal Prompt Aktivasi Audio Otomatis (Saat Pertama Kali Buka Dashboard)
+function showAudioUnlockModalIfRequired() {
+  const isUnlocked = window.SoundNotifier && window.SoundNotifier.isAudioUnlocked;
+  const modal = document.getElementById('audioActivationModal');
+  if (!isUnlocked && modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+window.activateAudioSystem = async function() {
+  if (window.SoundNotifier) {
+    await window.SoundNotifier.unlockAudio();
+    await window.SoundNotifier.requestNotificationPermission();
+    window.SoundNotifier.testSound();
+  }
+  const modal = document.getElementById('audioActivationModal');
+  if (modal) modal.style.display = 'none';
+  const banner = document.getElementById('audioUnlockBanner');
+  if (banner) banner.style.display = 'none';
+  updateAudioControlsUI();
+};
+
 // SSE Real-time Events Listener (Instant 0ms push)
 function setupRealtimeEvents() {
   if (!window.EventSource) return;
@@ -234,23 +293,7 @@ function setupRealtimeEvents() {
       try {
         const payload = JSON.parse(e.data);
         if (payload && payload.ticket) {
-          const exists = latestLoadedTickets.some(t => t.id === payload.ticket.id);
-          if (!exists) {
-            latestLoadedTickets.unshift(payload.ticket);
-            const waitingCount = latestLoadedTickets.filter(t => t.status === 'Menunggu').length;
-            if (window.SoundNotifier && payload.ticket.status === 'Menunggu') {
-              if (window.SoundNotifier.loopEnabled) {
-                window.SoundNotifier.startContinuousAlert(waitingCount);
-              } else {
-                window.SoundNotifier.playIncomingCallSound();
-              }
-              window.SoundNotifier.showDesktopNotification(
-                `🚨 Panggilan Baru: Ruang ${payload.ticket.room}`,
-                `Kendala: ${payload.ticket.category || 'Dukungan Teknis'}\nCatatan: ${payload.ticket.notes || '-'}`
-              );
-              window.SoundNotifier.startTitleBlink(`🚨 (${waitingCount}) Panggilan Ruang ${payload.ticket.room}`);
-            }
-          }
+          handleIncomingTicketDirect(payload.ticket);
         }
       } catch (err) {}
       loadTickets();
@@ -262,7 +305,8 @@ function setupRealtimeEvents() {
         if (payload && payload.ticket) {
           const idx = latestLoadedTickets.findIndex(t => t.id === payload.ticket.id);
           if (idx !== -1) {
-            latestLoadedTickets[idx] = payload.ticket;
+            latestLoadedTickets[idx] = { ...latestLoadedTickets[idx], ...payload.ticket };
+            saveCachedTickets(latestLoadedTickets);
           }
         }
       } catch (err) {}
@@ -271,11 +315,97 @@ function setupRealtimeEvents() {
 
     es.addEventListener('tickets_cleared', () => {
       latestLoadedTickets = [];
+      knownTicketIds = new Set();
+      saveCachedTickets([]);
+      saveStoredKnownTicketIds(knownTicketIds);
       loadTickets();
     });
   } catch (e) {
     console.warn('Realtime SSE error:', e);
   }
+}
+
+function handleIncomingTicketDirect(ticket) {
+  if (!ticket || !ticket.id) return;
+  const exists = latestLoadedTickets.some(t => t.id === ticket.id);
+  if (!exists) {
+    latestLoadedTickets.unshift(ticket);
+    saveCachedTickets(latestLoadedTickets);
+  }
+  if (ticket.status === 'Menunggu' && !knownTicketIds.has(ticket.id)) {
+    knownTicketIds.add(ticket.id);
+    saveStoredKnownTicketIds(knownTicketIds);
+
+    const waitingCount = latestLoadedTickets.filter(t => t.status === 'Menunggu').length;
+    triggerNewCallAlert(ticket, waitingCount);
+  }
+}
+
+function triggerNewCallAlert(ticket, waitingCount) {
+  if (!window.SoundNotifier) return;
+
+  // 1. Suara Nada Panggilan
+  if (window.SoundNotifier.loopEnabled) {
+    window.SoundNotifier.startContinuousAlert(waitingCount);
+  } else {
+    window.SoundNotifier.playIncomingCallSound();
+  }
+
+  // 2. Pengumuman Suara (Speech Synthesis)
+  if (window.SoundNotifier.speakAnnouncement) {
+    setTimeout(() => {
+      window.SoundNotifier.speakAnnouncement(`Panggilan darurat dari Ruang ${ticket.room}`);
+    }, 1200);
+  }
+
+  // 3. Notifikasi Desktop OS
+  window.SoundNotifier.showDesktopNotification(
+    `🚨 Panggilan Baru: Ruang ${ticket.room}`,
+    `Kendala: ${ticket.category || 'Dukungan Teknis'}\nCatatan: ${ticket.notes || '-'}`
+  );
+
+  // 4. Tab Title Blink
+  window.SoundNotifier.startTitleBlink(`🚨 (${waitingCount}) Panggilan Ruang ${ticket.room}`);
+}
+
+// Smart Ticket Reconciliation
+function reconcileTickets(serverTickets) {
+  let localTickets = latestLoadedTickets.length > 0 ? latestLoadedTickets : getCachedTickets();
+  const ticketMap = new Map();
+
+  // 1. Masukkan tiket lokal terlebih dahulu
+  for (const t of localTickets) {
+    if (t && t.id) ticketMap.set(t.id, t);
+  }
+
+  const newlyArrivedTickets = [];
+
+  // 2. Gabungkan dengan data dari server
+  if (Array.isArray(serverTickets)) {
+    for (const st of serverTickets) {
+      if (!st || !st.id) continue;
+      if (!ticketMap.has(st.id)) {
+        ticketMap.set(st.id, st);
+        if (st.status === 'Menunggu' && !knownTicketIds.has(st.id)) {
+          newlyArrivedTickets.push(st);
+        }
+      } else {
+        const existing = ticketMap.get(st.id);
+        const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+        const serverTime = new Date(st.updatedAt || st.createdAt || 0).getTime();
+        if (serverTime >= existingTime) {
+          ticketMap.set(st.id, { ...existing, ...st });
+        }
+      }
+    }
+  }
+
+  // 3. Urutkan kembali berdasarkan waktu dibuat (terbaru di atas)
+  const merged = Array.from(ticketMap.values()).sort((a, b) => {
+    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+  });
+
+  return { merged, newlyArrivedTickets };
 }
 
 let latestTicketRequestSeq = 0;
@@ -293,49 +423,35 @@ async function loadTickets() {
     }
     const data = await res.json();
     
-    // Guard against out-of-order async responses (discard older requests)
+    // Guard against out-of-order async responses
     if (thisSeq < latestTicketRequestSeq) {
       return;
     }
 
     if (!data.success || !Array.isArray(data.tickets)) return;
 
-    const tickets = data.tickets;
-    latestLoadedTickets = tickets;
-    const waitingTickets = tickets.filter(t => t.status === 'Menunggu');
+    // Smart Reconciliation
+    const { merged, newlyArrivedTickets } = reconcileTickets(data.tickets);
+    latestLoadedTickets = merged;
+    saveCachedTickets(latestLoadedTickets);
+
+    const waitingTickets = latestLoadedTickets.filter(t => t.status === 'Menunggu');
     const waitingCount = waitingTickets.length;
 
     // Check for NEW tickets to trigger ringtone & desktop notification
-    if (previousTicketCount !== null) {
-      // Find newly added tickets
-      const newWaiting = waitingTickets.filter(t => !knownTicketIds.has(t.id));
+    if (newlyArrivedTickets.length > 0) {
+      newlyArrivedTickets.forEach(t => knownTicketIds.add(t.id));
+      saveStoredKnownTicketIds(knownTicketIds);
 
-      if (newWaiting.length > 0) {
-        // Mainkan nada notifikasi
-        if (window.SoundNotifier) {
-          if (window.SoundNotifier.loopEnabled) {
-            window.SoundNotifier.startContinuousAlert(waitingCount);
-          } else {
-            window.SoundNotifier.playIncomingCallSound();
-          }
-
-          // Notifikasi Desktop Browser
-          const newest = newWaiting[0];
-          const notifTitle = `🚨 Panggilan Baru: Ruang ${newest.room}`;
-          const notifBody = `Kendala: ${newest.category || 'Dukungan Teknis'}\nCatatan: ${newest.notes || '-'}`;
-          window.SoundNotifier.showDesktopNotification(notifTitle, notifBody);
-
-          // Berkedip di judul tab
-          window.SoundNotifier.startTitleBlink(`🚨 (${waitingCount}) Panggilan Ruang ${newest.room}`);
-        }
-      } else if (waitingCount === 0 && window.SoundNotifier) {
-        // Hentikan alarm jika tidak ada tiket menunggu lagi
-        window.SoundNotifier.stopContinuousAlert();
-      }
+      const newest = newlyArrivedTickets[0];
+      triggerNewCallAlert(newest, waitingCount);
+    } else if (waitingCount === 0 && window.SoundNotifier) {
+      window.SoundNotifier.stopContinuousAlert();
     }
 
-    // Perbarui set ID tiket yang diketahui
-    knownTicketIds = new Set(tickets.map(t => t.id));
+    // Pastikan semua tiket aktif tersimpan di set ID
+    latestLoadedTickets.forEach(t => knownTicketIds.add(t.id));
+    saveStoredKnownTicketIds(knownTicketIds);
     previousTicketCount = waitingCount;
 
     // Update alarm indicator di UI
@@ -346,14 +462,14 @@ async function loadTickets() {
 
     // Update Stats
     document.getElementById('statMenunggu').textContent = waitingCount;
-    document.getElementById('statDiproses').textContent = tickets.filter(t => t.status === 'Diproses').length;
-    document.getElementById('statSelesai').textContent = tickets.filter(t => t.status === 'Selesai').length;
-    document.getElementById('statTotal').textContent = tickets.length;
+    document.getElementById('statDiproses').textContent = latestLoadedTickets.filter(t => t.status === 'Diproses').length;
+    document.getElementById('statSelesai').textContent = latestLoadedTickets.filter(t => t.status === 'Selesai').length;
+    document.getElementById('statTotal').textContent = latestLoadedTickets.length;
 
     // Filter tickets
-    let displayTickets = tickets;
+    let displayTickets = latestLoadedTickets;
     if (currentFilter !== 'all') {
-      displayTickets = tickets.filter(t => t.status.toLowerCase() === currentFilter.toLowerCase());
+      displayTickets = latestLoadedTickets.filter(t => t.status.toLowerCase() === currentFilter.toLowerCase());
     }
 
     // Smart Render: only re-render if data has changed to keep UI ultra-smooth
@@ -367,6 +483,14 @@ async function loadTickets() {
     document.getElementById('lastUpdateTime').textContent = 'Terakhir diperbarui: ' + now.toLocaleTimeString('id-ID');
   } catch (err) {
     console.error('Error loading tickets:', err);
+    // Jika koneksi sempat gagal, tetap tampilkan data lokal yang sudah tercache agar tidak blank/hilang-timbul
+    if (latestLoadedTickets.length > 0) {
+      let displayTickets = latestLoadedTickets;
+      if (currentFilter !== 'all') {
+        displayTickets = latestLoadedTickets.filter(t => t.status.toLowerCase() === currentFilter.toLowerCase());
+      }
+      renderTable(displayTickets);
+    }
   }
 }
 
@@ -510,18 +634,54 @@ async function updateStatus(ticketId, newStatus, handledBy = "") {
   }
 }
 
+// Background Web Worker Ticker (Kebal terhadap Browser Tab Throttling saat tab di background)
+function setupBackgroundWorker() {
+  const workerCode = `
+    let timer = null;
+    self.onmessage = function(e) {
+      if (e.data === 'start') {
+        if (timer) clearInterval(timer);
+        timer = setInterval(function() {
+          self.postMessage('tick');
+        }, 2000);
+      } else if (e.data === 'stop') {
+        if (timer) clearInterval(timer);
+        timer = null;
+      }
+    };
+  `;
+  try {
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    const worker = new Worker(URL.createObjectURL(blob));
+    worker.onmessage = function(e) {
+      if (e.data === 'tick') {
+        loadTickets();
+      }
+    };
+    worker.postMessage('start');
+    return worker;
+  } catch (e) {
+    console.warn('Worker initialization fallback to standard timer:', e);
+    setInterval(loadTickets, 2000);
+    return null;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Inisialisasi UI Audio Controls
   updateAudioControlsUI();
 
+  // Cek apakah audio browser perlu diaktifkan via modal interaktif
+  showAudioUnlockModalIfRequired();
+
   // Inisialisasi Koneksi Realtime SSE (Instant Push Notification 0ms)
   setupRealtimeEvents();
 
-  // Load Data Tiket
+  // Load Data Tiket Awal
   loadTickets();
 
-  // Fallback Polling interval (2 detik) dengan anti-cache
-  setInterval(loadTickets, 2000);
+  // Inisialisasi Background Web Worker Polling (Tetap aktif 2 detik walau tab di-minimize)
+  setupBackgroundWorker();
 
   // Setup Listener Kontrol Audio
   const selectSound = document.getElementById('selectSoundType');
@@ -574,6 +734,16 @@ document.addEventListener('DOMContentLoaded', () => {
     chkLoop.addEventListener('change', (e) => {
       if (window.SoundNotifier) {
         window.SoundNotifier.setLoopEnabled(e.target.checked);
+      }
+    });
+  }
+
+  const chkSpeech = document.getElementById('chkVoiceAnnouncement');
+  if (chkSpeech) {
+    chkSpeech.addEventListener('change', (e) => {
+      if (window.SoundNotifier) {
+        window.SoundNotifier.isSpeechEnabled = e.target.checked;
+        localStorage.setItem('sbm_speech_enabled', e.target.checked ? 'true' : 'false');
       }
     });
   }

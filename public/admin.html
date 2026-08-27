@@ -172,13 +172,36 @@
         <!-- Checkbox Ulangi Alarm -->
         <label class="audio-loop-label" title="Alarm akan terus berbunyi setiap beberapa detik hingga staf mengambil tiket">
           <input type="checkbox" id="chkLoopAlarm">
-          <span>🔁 Ulangi jika belum ditangani</span>
+          <span>🔁 Ulangi Alarm</span>
+        </label>
+
+        <!-- Checkbox Suara Ucapan -->
+        <label class="audio-loop-label" title="Sistem akan mengumumkan nama ruangan secara lisan saat panggilan masuk">
+          <input type="checkbox" id="chkVoiceAnnouncement" checked>
+          <span>🗣️ Suara Petugas</span>
         </label>
 
         <!-- Tombol Izin Notifikasi Desktop -->
         <button type="button" id="btnDesktopNotif" class="btn-audio-action" title="Aktifkan notifikasi pop-up desktop">
           <span>🔔 Notif Desktop</span>
         </button>
+      </div>
+    </div>
+
+    <!-- Audio Activation Splash Modal (Muncul saat pertama kali buka agar audio aktif seketika) -->
+    <div id="audioActivationModal" class="superadmin-modal-overlay" style="display: none; z-index: 99999;">
+      <div class="superadmin-modal-card" style="max-width: 460px; text-align: center;">
+        <div style="font-size: 3.5rem; margin-bottom: 12px;">🔊</div>
+        <h3 style="font-size: 1.4rem; color: #0F2C59; font-weight: 800; margin-bottom: 8px;">Siaga Pantau Panggilan Kelas</h3>
+        <p style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px;">
+          Untuk memastikan <strong>alarm suara instan</strong> dan <strong>notifikasi pop-up Windows</strong> berbunyi seketika saat dosen memanggil, klik tombol di bawah untuk mengaktifkan sistem audio:
+        </p>
+        <button type="button" class="btn btn-primary" onclick="activateAudioSystem()" style="width: 100%; padding: 14px; font-size: 1.05rem; font-weight: 800; border-radius: 10px; box-shadow: 0 4px 14px rgba(15, 44, 89, 0.25);">
+          🚀 Mulai Pantau Panggilan (Aktifkan Suara)
+        </button>
+        <div style="font-size: 0.76rem; color: #94A3B8; margin-top: 12px;">
+          Sistem akan meminta izin notifikasi desktop untuk pemberitahuan latar belakang.
+        </div>
       </div>
     </div>
     

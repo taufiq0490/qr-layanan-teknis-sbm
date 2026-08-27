@@ -12,7 +12,7 @@ class SoundNotifierEngine {
     this.loopEnabled = localStorage.getItem('sbm_sound_loop') === 'true';
     this.loopIntervalId = null;
     this.isLooping = false;
-    this.isAudioUnlocked = false;
+    this.isSpeechEnabled = localStorage.getItem('sbm_speech_enabled') !== 'false';
 
     // Desktop notification tracking
     this.originalTitle = document.title;
@@ -31,24 +31,70 @@ class SoundNotifierEngine {
       }
     }
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
+      this.audioCtx.resume().then(() => {
+        this.isAudioUnlocked = true;
+        this.updateUnlockBannerUI(false);
+      }).catch(() => {});
+    } else if (this.audioCtx && this.audioCtx.state === 'running') {
+      this.isAudioUnlocked = true;
     }
     return this.audioCtx;
   }
 
-  // Listener untuk membuka kunci browser autoplay policy
+  // Explicit user-gesture unlock
+  async unlockAudio() {
+    try {
+      const ctx = this.getAudioContext();
+      if (ctx) {
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
+        }
+        // Warm up audio buffer with silent oscillator
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.05);
+
+        this.isAudioUnlocked = (ctx.state === 'running');
+        this.updateUnlockBannerUI(!this.isAudioUnlocked);
+        return this.isAudioUnlocked;
+      }
+    } catch (e) {
+      console.warn('Audio unlock error:', e);
+    }
+    return false;
+  }
+
+  // Listener untuk membuka kunci browser autoplay policy pada interaksi pertama
   initAutoUnlock() {
     const unlock = () => {
-      const ctx = this.getAudioContext();
-      if (ctx && ctx.state === 'running') {
-        this.isAudioUnlocked = true;
-        this.updateUnlockBannerUI(false);
-      }
+      this.unlockAudio();
     };
 
-    ['click', 'touchstart', 'keydown'].forEach(evt => {
+    ['click', 'touchstart', 'keydown', 'pointerdown'].forEach(evt => {
       document.addEventListener(evt, unlock, { passive: true, once: false });
     });
+  }
+
+  // Helper untuk pengumuman suara bahasa Indonesia
+  speakAnnouncement(text) {
+    if (this.isMuted || !this.isSpeechEnabled) return;
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel(); // Batalkan antrean ucapan lama
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'id-ID';
+        utterance.rate = 1.05;
+        utterance.pitch = 1.0;
+        utterance.volume = Math.min(1.0, this.volume * 1.2);
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.warn('Speech synthesis error:', e);
+      }
+    }
   }
 
   // Helper untuk membuat Master Gain dengan kontrol volume

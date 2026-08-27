@@ -19,6 +19,9 @@ const {
   updateTicketWaStatusAsync,
   clearAllTickets,
   clearAllTicketsAsync,
+  getStorageStatus,
+  testKvConnection,
+  saveConfigAsync,
   sanitizeString
 } = require('./services/storage');
 const { sendClassroomAlert, fetchWhatsAppGroups } = require('./services/waGateway');
@@ -772,6 +775,8 @@ app.get('/api/admin/settings', requireSuperAdminAuthAPI, (req, res) => {
   const config = readConfig();
   const rawToken = (config.waGateway && config.waGateway.fonnteToken) || '';
   const rawTeleToken = (config.telegramGateway && config.telegramGateway.botToken) || '';
+  const rawKvToken = (config.kvConfig && config.kvConfig.token) || process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || '';
+  const kvUrl = (config.kvConfig && config.kvConfig.url) || process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || '';
   
   res.json({
     success: true,
@@ -794,6 +799,11 @@ app.get('/api/admin/settings', requireSuperAdminAuthAPI, (req, res) => {
         botToken: maskToken(rawTeleToken),
         hasBotToken: Boolean(rawTeleToken),
         chatIds: config.telegramGateway?.chatIds || []
+      },
+      kvConfig: {
+        url: kvUrl,
+        token: maskToken(rawKvToken),
+        hasToken: Boolean(rawKvToken)
       },
       geofencing: {
         enabled: config.geofencing?.enabled !== false,
@@ -819,6 +829,7 @@ app.post('/api/admin/settings', requireSuperAdminAuthAPI, async (req, res) => {
     notificationChannel, 
     waGateway, 
     telegramGateway, 
+    kvConfig,
     currentSuperAdminPassword,
     adminPassword, 
     superAdminPassword, 
@@ -868,6 +879,16 @@ app.post('/api/admin/settings', requireSuperAdminAuthAPI, async (req, res) => {
     }
   }
 
+  // If KV token is masked or not provided, preserve existing token
+  let kvTokenToSave = currentConfig.kvConfig?.token || '';
+  if (kvConfig && typeof kvConfig.token === 'string') {
+    const inputKvToken = kvConfig.token.trim();
+    if (inputKvToken && !inputKvToken.includes('••••') && !inputKvToken.includes('****')) {
+      kvTokenToSave = inputKvToken;
+    }
+  }
+  const kvUrlToSave = (kvConfig && typeof kvConfig.url === 'string') ? kvConfig.url.trim() : (currentConfig.kvConfig?.url || '');
+
   const newConfig = {
     ...currentConfig,
     appTitle: appTitle ? sanitizeString(appTitle) : currentConfig.appTitle,
@@ -890,6 +911,10 @@ app.post('/api/admin/settings', requireSuperAdminAuthAPI, async (req, res) => {
       enabled: telegramGateway?.enabled !== false,
       botToken: teleTokenToSave,
       chatIds: Array.isArray(telegramGateway?.chatIds) ? telegramGateway.chatIds : (currentConfig.telegramGateway?.chatIds || [])
+    },
+    kvConfig: {
+      url: kvUrlToSave,
+      token: kvTokenToSave
     },
     geofencing: {
       enabled: geofencing?.enabled !== false,
@@ -921,6 +946,17 @@ app.post('/api/admin/settings', requireSuperAdminAuthAPI, async (req, res) => {
 app.get('/api/admin/storage-status', requireAdminAuthAPI, (req, res) => {
   const status = getStorageStatus();
   res.json({ success: true, ...status });
+});
+
+// 7.01 Test KV Connection (Super Admin - Protected)
+app.post('/api/admin/test-kv', requireSuperAdminAuthAPI, async (req, res) => {
+  try {
+    const { url, token } = req.body || {};
+    const result = await testKvConnection(url, token);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // 7.1 Fetch WhatsApp Groups from Fonnte (Super Admin - Protected)

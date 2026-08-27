@@ -276,6 +276,40 @@
           </div>
         </div>
 
+        <!-- Section: Cloud Database Storage (Upstash Redis / Vercel KV) -->
+        <div style="border-top: 2px dashed #CBD5E1; padding-top: 16px; margin-top: 20px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.3rem;">⚡</span>
+              <h3 style="font-size: 1.1rem; color: #7C3AED; margin: 0;">Penyimpanan Cloud KV (Upstash Redis / Vercel KV)</h3>
+            </div>
+            <button type="button" class="btn btn-outline" id="btnTestKv" style="color: #7C3AED; border-color: #C4B5FD; font-size: 0.82rem; padding: 4px 10px;">
+              🔍 Uji Koneksi Cloud KV
+            </button>
+          </div>
+
+          <div style="background: #F5F3FF; border: 1px solid #DDD6FE; border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #5B21B6; margin-bottom: 14px; line-height: 1.5;">
+            <strong>ℹ️ Mengapa Menggunakan Cloud KV di Vercel?</strong><br>
+            Vercel Serverless memiliki sifat <em>multi-instance</em> (wadah terpisah). Menggunakan database Redis gratis dari <strong><a href="https://upstash.com" target="_blank" style="color: #6D28D9; text-decoration: underline; font-weight: 700;">Upstash.com</a></strong> (atau Vercel KV) memastikan data panggilan <strong>100% konsisten & tidak pernah hilang-timbul</strong> di semua perangkat.
+          </div>
+
+          <!-- KV URL -->
+          <div class="form-group">
+            <label class="form-label" for="kvUrl">Upstash Redis REST URL:</label>
+            <input type="text" id="kvUrl" class="form-control" placeholder="Contoh: https://xxxx-xxxx-00000.upstash.io">
+            <small style="color: var(--text-muted); font-size: 0.8rem;">Dapatkan REST URL gratis dari dashboard Upstash Redis ➔ tab REST API.</small>
+          </div>
+
+          <!-- KV Token -->
+          <div class="form-group">
+            <label class="form-label" for="kvToken">Upstash Redis REST Token (Disamarkan):</label>
+            <input type="password" id="kvToken" class="form-control" placeholder="Masukkan token REST Upstash Redis (AXxxxx...)">
+            <small style="color: var(--text-muted); font-size: 0.8rem;">Token disamarkan. Masukkan token baru jika ingin memperbarui.</small>
+          </div>
+
+          <div id="kvTestResultBox" style="display: none; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; margin-top: 8px;"></div>
+        </div>
+
         <!-- Section: General Settings -->
         <div style="border-top: 2px dashed #CBD5E1; padding-top: 16px; margin-top: 20px;">
           <!-- Message Template -->

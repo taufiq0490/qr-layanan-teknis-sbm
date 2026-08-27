@@ -42,6 +42,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnTestWa = document.getElementById('btnTestWa');
   const btnTestTele = document.getElementById('btnTestTele');
 
+  const kvUrl = document.getElementById('kvUrl');
+  const kvToken = document.getElementById('kvToken');
+  const btnTestKv = document.getElementById('btnTestKv');
+  const kvTestResultBox = document.getElementById('kvTestResultBox');
+
   let currentRooms = [];
 
   // Check Super Admin Auth
@@ -90,6 +95,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       fonnteToken.value = (s.waGateway && s.waGateway.fonnteToken) || '';
       staffNumbersInput.value = (s.waGateway && s.waGateway.staffNumbers) ? s.waGateway.staffNumbers.join(', ') : '';
       
+      // Cloud KV
+      if (kvUrl) kvUrl.value = (s.kvConfig && s.kvConfig.url) || '';
+      if (kvToken) kvToken.value = (s.kvConfig && s.kvConfig.token) || '';
+
       // Geofencing
       const geo = s.geofencing || {};
       const geoEnabled = document.getElementById('geoEnabled');
@@ -345,6 +354,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         botToken: teleBotToken.value.trim(),
         chatIds: chatIds
       },
+      kvConfig: {
+        url: kvUrl ? kvUrl.value.trim() : '',
+        token: kvToken ? kvToken.value.trim() : ''
+      },
       geofencing: {
         enabled: geoEnabled ? geoEnabled.checked : true,
         latitude: geoLat ? parseFloat(geoLat.value) : -6.23933,
@@ -368,7 +381,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (data.newToken) {
           localStorage.setItem('admin_token', data.newToken);
         }
-        let msg = '✅ Pengaturan sistem, WhatsApp, & Telegram Bot berhasil disimpan!';
+        let msg = '✅ Seluruh pengaturan sistem, Cloud KV, WhatsApp, & Telegram Bot berhasil disimpan!';
         if (newSuperPass && newStaffPass) {
           msg = '✅ Pengaturan, Kata Sandi Super Admin & Kata Sandi Staf baru berhasil diperbarui!';
         } else if (newSuperPass) {
@@ -388,6 +401,61 @@ document.addEventListener('DOMContentLoaded', async () => {
       alert('Terjadi kesalahan koneksi.');
     }
   });
+
+  // Test Cloud KV
+  if (btnTestKv) {
+    btnTestKv.addEventListener('click', async () => {
+      const urlVal = kvUrl ? kvUrl.value.trim() : '';
+      const tokenVal = kvToken ? kvToken.value.trim() : '';
+
+      if (!urlVal) {
+        alert('⚠️ Mohon isi Upstash Redis REST URL terlebih dahulu.');
+        if (kvUrl) kvUrl.focus();
+        return;
+      }
+
+      btnTestKv.disabled = true;
+      btnTestKv.textContent = '⏳ Menguji KV...';
+      if (kvTestResultBox) {
+        kvTestResultBox.style.display = 'none';
+      }
+
+      try {
+        const res = await fetch('/api/admin/test-kv', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ url: urlVal, token: tokenVal })
+        });
+        const data = await res.json();
+
+        if (kvTestResultBox) {
+          kvTestResultBox.style.display = 'block';
+          if (data.success) {
+            kvTestResultBox.style.background = '#ECFDF5';
+            kvTestResultBox.style.border = '1px solid #A7F3D0';
+            kvTestResultBox.style.color = '#065F46';
+            kvTestResultBox.innerHTML = `<strong>✅ Sukses:</strong> ${escapeHTML(data.message || 'Koneksi Cloud KV / Upstash Redis berhasil!')}`;
+          } else {
+            kvTestResultBox.style.background = '#FEF2F2';
+            kvTestResultBox.style.border = '1px solid #FECACA';
+            kvTestResultBox.style.color = '#991B1B';
+            kvTestResultBox.innerHTML = `<strong>❌ Gagal:</strong> ${escapeHTML(data.error || 'Tidak dapat terhubung ke Cloud KV.')}`;
+          }
+        }
+      } catch (e) {
+        if (kvTestResultBox) {
+          kvTestResultBox.style.display = 'block';
+          kvTestResultBox.style.background = '#FEF2F2';
+          kvTestResultBox.style.border = '1px solid #FECACA';
+          kvTestResultBox.style.color = '#991B1B';
+          kvTestResultBox.innerHTML = `<strong>❌ Error Jaringan:</strong> ${escapeHTML(e.message)}`;
+        }
+      } finally {
+        btnTestKv.disabled = false;
+        btnTestKv.textContent = '🔍 Uji Koneksi Cloud KV';
+      }
+    });
+  }
 
   // Test Telegram
   if (btnTestTele) {

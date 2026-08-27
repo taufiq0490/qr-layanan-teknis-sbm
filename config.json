@@ -34,5 +34,9 @@
     "longitude": 106.83228,
     "maxRadiusMeters": 1000
   },
-  "googleSheetUrl": "https://docs.google.com/spreadsheets/d/1RIC8jKaY14wu6wgh1vQ47df8_fnZ1NimRP-EU_n-7vQ/edit?gid=0#gid=0"
+  "googleSheetUrl": "https://docs.google.com/spreadsheets/d/1RIC8jKaY14wu6wgh1vQ47df8_fnZ1NimRP-EU_n-7vQ/edit?gid=0#gid=0",
+  "kvConfig": {
+    "url": "https://faithful-collie-195726.upstash.io",
+    "token": ""
+  }
 }

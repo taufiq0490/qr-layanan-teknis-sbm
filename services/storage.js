@@ -70,21 +70,79 @@ function saveConfig(config) {
   }
 }
 
+function getKvCredentials() {
+  const cfg = readConfig();
+  const kvUrl = process.env.KV_REST_API_URL || 
+                process.env.UPSTASH_REDIS_REST_URL || 
+                cfg.kvConfig?.url || 
+                cfg.upstashRedis?.url || 
+                '';
+  const kvToken = process.env.KV_REST_API_TOKEN || 
+                  process.env.UPSTASH_REDIS_REST_TOKEN || 
+                  cfg.kvConfig?.token || 
+                  cfg.upstashRedis?.token || 
+                  '';
+  return { kvUrl: kvUrl.trim(), kvToken: kvToken.trim() };
+}
+
 function getStorageStatus() {
-  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const { kvUrl, kvToken } = getKvCredentials();
   const hasCloudKv = Boolean(kvUrl && kvToken);
   return {
     isVercel: Boolean(isVercel),
     hasCloudKv,
-    storageType: hasCloudKv ? 'Vercel KV / Upstash Redis (Persistent Cloud)' : (isVercel ? 'Vercel Ephemeral Memory (/tmp)' : 'Local File Storage (tickets.json)')
+    kvUrl: kvUrl ? kvUrl.replace(/(https?:\/\/)[^@]+@/, '$1') : '',
+    storageType: hasCloudKv ? 'Vercel KV / Upstash Redis (Persistent Cloud Database)' : (isVercel ? 'Vercel Ephemeral Memory (/tmp)' : 'Local File Storage (tickets.json)')
   };
 }
 
-// Cloud KV / Upstash Redis REST integration for Vercel
+// Test KV Connection
+async function testKvConnection(url, token) {
+  const targetUrl = url || getKvCredentials().kvUrl;
+  const targetToken = token || getKvCredentials().kvToken;
+  if (!targetUrl || !targetToken) {
+    return { success: false, error: 'URL atau Token Cloud KV / Upstash Redis belum diisi.' };
+  }
+  try {
+    const testKey = 'sbm_ping_' + Date.now();
+    // 1. SET test key
+    const setRes = await fetch(`${targetUrl}/set/${testKey}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${targetToken}`,
+        'Content-Type': 'application/json'
+      },
+      signal: AbortSignal.timeout(6000),
+      body: JSON.stringify({ ping: 'pong', time: new Date().toISOString() })
+    });
+    if (!setRes.ok) {
+      return { success: false, error: `HTTP ${setRes.status}: ${setRes.statusText}` };
+    }
+
+    // 2. GET test key
+    const getRes = await fetch(`${targetUrl}/get/${testKey}`, {
+      headers: { Authorization: `Bearer ${targetToken}` },
+      signal: AbortSignal.timeout(6000)
+    });
+    const getData = await getRes.json();
+
+    // 3. Clean up test key
+    fetch(`${targetUrl}/del/${testKey}`, {
+      headers: { Authorization: `Bearer ${targetToken}` }
+    }).catch(() => {});
+
+    if (getData && getData.result) {
+      return { success: true, message: 'Koneksi Cloud KV / Upstash Redis berhasil dan aktif!' };
+    }
+    return { success: true, message: 'Koneksi berhasil terhubung.' };
+  } catch (e) {
+    return { success: false, error: e.message || 'Gagal menghubungi server Cloud KV.' };
+  }
+}
+
+// Cloud KV / Upstash Redis REST integration for Vercel & Local
 async function getKvConfig() {
-  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const { kvUrl, kvToken } = getKvCredentials();
   if (!kvUrl || !kvToken) return null;
   try {
     const res = await fetch(`${kvUrl}/get/sbm_config`, {
@@ -104,8 +162,7 @@ async function getKvConfig() {
 }
 
 async function setKvConfig(config) {
-  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const { kvUrl, kvToken } = getKvCredentials();
   if (!kvUrl || !kvToken) return false;
   try {
     await fetch(`${kvUrl}/set/sbm_config`, {
@@ -141,8 +198,7 @@ async function saveConfigAsync(config) {
 
 // Cloud KV / Upstash Redis REST integration for Vercel
 async function getKvTickets() {
-  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const { kvUrl, kvToken } = getKvCredentials();
   if (!kvUrl || !kvToken) return null;
   try {
     const res = await fetch(`${kvUrl}/get/sbm_tickets`, {
@@ -150,7 +206,7 @@ async function getKvTickets() {
       signal: AbortSignal.timeout(4000)
     });
     const data = await res.json();
-    if (data && data.result) {
+    if (data && data.result !== undefined && data.result !== null) {
       const parsed = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
       return Array.isArray(parsed) ? parsed : [];
     }
@@ -162,8 +218,7 @@ async function getKvTickets() {
 }
 
 async function setKvTickets(tickets) {
-  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const { kvUrl, kvToken } = getKvCredentials();
   if (!kvUrl || !kvToken) return false;
   try {
     await fetch(`${kvUrl}/set/sbm_tickets`, {
@@ -206,7 +261,7 @@ function readTickets() {
 
 async function readTicketsAsync() {
   const cloudTickets = await getKvTickets();
-  if (cloudTickets !== null && Array.isArray(cloudTickets) && cloudTickets.length > 0) {
+  if (cloudTickets !== null && Array.isArray(cloudTickets)) {
     inMemoryTickets = cloudTickets;
     return cloudTickets;
   }
@@ -429,5 +484,6 @@ module.exports = {
   updateTicketWaStatusAsync,
   clearAllTickets,
   clearAllTicketsAsync,
+  testKvConnection,
   sanitizeString
 };
