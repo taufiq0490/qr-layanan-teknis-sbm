@@ -20,7 +20,7 @@
   },
   "adminPassword": "Bismillah.1",
   "claimBaseUrl": "https://qr-layanan-teknis-sbm.vercel.app",
-  "notificationChannel": "fonnte",
+  "notificationChannel": "telegram",
   "telegramGateway": {
     "enabled": true,
     "botToken": "8781937865:AAFn1t51UoKhKj2JsUcCSPOxUMD1RTCU-8U",
