@@ -29,11 +29,11 @@
     ]
   },
   "geofencing": {
-    "enabled": true,
+    "enabled": false,
     "campusName": "SBM ITB Jakarta (Graha Irama)",
     "latitude": -6.23933,
     "longitude": 106.83228,
     "maxRadiusMeters": 250
   },
-  "googleSheetUrl": ""
+  "googleSheetUrl": "https://docs.google.com/spreadsheets/d/1RIC8jKaY14wu6wgh1vQ47df8_fnZ1NimRP-EU_n-7vQ/edit?gid=0#gid=0"
 }
