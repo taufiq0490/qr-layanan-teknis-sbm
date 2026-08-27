@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnConfirmSend = document.getElementById('btnConfirmSend');
   const modalRoomName = document.getElementById('modalRoomName');
   const modalOptionBtns = document.querySelectorAll('.modal-option-btn');
+  const notesLabel = document.getElementById('notesLabel');
   const inputOptionalNotes = document.getElementById('inputOptionalNotes');
 
   // Tracking View Elements
@@ -41,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const rateLimitText = document.getElementById('rateLimitText');
   const rateLimitBadge = document.getElementById('rateLimitBadge');
 
-  let selectedCategory = 'Connect Smart Board/Projector';
+  let selectedCategory = 'Umum';
   let activeTicketId = null;
   let pollInterval = null;
   let geofencingConfig = {
@@ -51,6 +52,36 @@ document.addEventListener('DOMContentLoaded', () => {
     longitude: 106.83228,
     maxRadiusMeters: 250
   };
+
+  // Helper untuk update status wajib/opsional catatan kendala
+  function updateNotesRequirement(category) {
+    const isUmum = (category === 'Umum');
+    if (notesLabel) {
+      if (isUmum) {
+        notesLabel.innerHTML = 'Catatan kendala / rincian masalah <span style="color: #DC2626;">(wajib diisi)</span>: <span style="color: #DC2626;">*</span>';
+      } else {
+        notesLabel.innerHTML = 'Catatan kendala / keterangan tambahan (opsional):';
+      }
+    }
+    if (inputOptionalNotes) {
+      if (isUmum) {
+        inputOptionalNotes.placeholder = 'Tuliskan catatan kendala yang dialami... (wajib diisi)';
+      } else {
+        inputOptionalNotes.placeholder = 'Tuliskan catatan tambahan jika ada...';
+        inputOptionalNotes.style.borderColor = '';
+        inputOptionalNotes.style.boxShadow = '';
+      }
+    }
+  }
+
+  if (inputOptionalNotes) {
+    inputOptionalNotes.addEventListener('input', () => {
+      if (inputOptionalNotes.value.trim()) {
+        inputOptionalNotes.style.borderColor = '';
+        inputOptionalNotes.style.boxShadow = '';
+      }
+    });
+  }
 
   // Haversine distance calculator
   function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -114,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Open Modal on "PANGGIL BANTUAN SEGERA" Click
   btnCallNow.addEventListener('click', () => {
+    updateNotesRequirement(selectedCategory);
     categoryModal.style.display = 'flex';
   });
 
@@ -137,7 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => {
       modalOptionBtns.forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
-      selectedCategory = btn.getAttribute('data-category');
+      selectedCategory = btn.getAttribute('data-category') || 'Umum';
+      updateNotesRequirement(selectedCategory);
     });
   });
 
@@ -171,8 +204,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Confirm and Send Call Button Click
   btnConfirmSend.addEventListener('click', async () => {
-    const finalCategory = selectedCategory || 'Connect Smart Board/Projector';
+    const finalCategory = selectedCategory || 'Umum';
     const finalNotes = inputOptionalNotes ? inputOptionalNotes.value.trim() : '';
+
+    // Validasi: Jika kategori Umum dipilih, catatan kendala WAJIB diisi
+    if (finalCategory === 'Umum' && !finalNotes) {
+      alert('⚠️ Catatan kendala wajib diisi jika memilih kategori "Umum".\n\nSilakan tuliskan penjelasan singkat mengenai kendala yang Anda alami agar tim teknis dapat membawa peralatan yang tepat.');
+      if (inputOptionalNotes) {
+        inputOptionalNotes.focus();
+        inputOptionalNotes.style.borderColor = '#DC2626';
+        inputOptionalNotes.style.boxShadow = '0 0 0 3px rgba(220, 38, 38, 0.2)';
+      }
+      resetModalButton();
+      return;
+    }
 
     let userLat = null;
     let userLon = null;

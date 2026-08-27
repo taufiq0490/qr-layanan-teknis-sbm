@@ -73,7 +73,7 @@ async function sendClassroomAlert({ room, category, notes, ticketId }) {
 
   // Add optional details if category or notes were specified
   let extraDetails = [];
-  if (category && category !== 'Umum') {
+  if (category) {
     extraDetails.push(`📌 Kendala: ${category}`);
   }
   if (notes && notes.trim() !== '') {

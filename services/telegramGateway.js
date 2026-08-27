@@ -20,7 +20,7 @@ async function sendTelegramAlert({ room, category, notes, ticketId }) {
   let message = template.replace('{room}', `<b>${room}</b>`);
 
   let extraLines = [];
-  if (category && category !== 'Umum') {
+  if (category) {
     extraLines.push(`📌 <b>Kendala:</b> ${category}`);
   }
   if (notes && notes.trim() !== '') {

@@ -474,39 +474,45 @@
             Pilih kendala teknis di ruang <span id="modalRoomName" style="color: var(--primary); font-weight: 800;">-</span>:
           </p>
 
-          <!-- 4 Main Requested Options -->
+          <!-- 5 Requested Options -->
           <div class="modal-options-list" id="modalOptionsList">
-            <button class="modal-option-btn selected" type="button" data-category="Connect Smart Board/Projector">
+            <button class="modal-option-btn selected" type="button" data-category="Umum">
               <span class="opt-num">1</span>
-              <span class="opt-icon">🖥️</span>
-              <span>Connect Smart Board/Projector</span>
+              <span class="opt-icon">🛠️</span>
+              <span>Umum</span>
             </button>
 
-            <button class="modal-option-btn" type="button" data-category="Mic/Audio">
+            <button class="modal-option-btn" type="button" data-category="Connect Smart Board">
               <span class="opt-num">2</span>
-              <span class="opt-icon">🎤</span>
-              <span>Mic/Audio</span>
+              <span class="opt-icon">🖥️</span>
+              <span>Connect Smart Board</span>
+            </button>
+
+            <button class="modal-option-btn" type="button" data-category="Pointer">
+              <span class="opt-num">3</span>
+              <span class="opt-icon">🎯</span>
+              <span>Pointer</span>
             </button>
 
             <button class="modal-option-btn" type="button" data-category="AC Ruangan">
-              <span class="opt-num">3</span>
+              <span class="opt-num">4</span>
               <span class="opt-icon">❄️</span>
               <span>AC Ruangan</span>
             </button>
 
-            <button class="modal-option-btn" type="button" data-category="Pointer">
-              <span class="opt-num">4</span>
-              <span class="opt-icon">🎯</span>
-              <span>Pointer</span>
+            <button class="modal-option-btn" type="button" data-category="Mic/Audio">
+              <span class="opt-num">5</span>
+              <span class="opt-icon">🎤</span>
+              <span>Mic/Audio</span>
             </button>
           </div>
 
           <!-- Notes Input Field -->
           <div style="margin-top: 10px; margin-bottom: 6px;">
-            <label for="inputOptionalNotes" style="font-size: 0.82rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
-              Catatan kendala / keterangan tambahan (opsional):
+            <label id="notesLabel" for="inputOptionalNotes" style="font-size: 0.82rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+              Catatan kendala / rincian masalah <span style="color: #DC2626;">(wajib diisi)</span>: <span style="color: #DC2626;">*</span>
             </label>
-            <input type="text" id="inputOptionalNotes" class="form-control" style="font-size: 0.9rem;" placeholder="Tuliskan catatan tambahan jika ada..." maxlength="120">
+            <input type="text" id="inputOptionalNotes" class="form-control" style="font-size: 0.9rem;" placeholder="Tuliskan catatan kendala yang dialami... (wajib diisi)" maxlength="120">
           </div>
         </div>
 
