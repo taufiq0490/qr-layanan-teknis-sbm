@@ -14,7 +14,7 @@ const {
   clearAllTickets,
   sanitizeString
 } = require('./services/storage');
-const { sendClassroomAlert } = require('./services/waGateway');
+const { sendClassroomAlert, fetchWhatsAppGroups } = require('./services/waGateway');
 const { sendTelegramAlert, sendTelegramStatusUpdate } = require('./services/telegramGateway');
 
 const app = express();
@@ -676,6 +676,21 @@ app.post('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
     res.json({ success: true, message: 'Pengaturan berhasil disimpan!' });
   } else {
     res.status(500).json({ success: false, error: 'Gagal menyimpan konfigurasi.' });
+  }
+});
+
+// 7.1 Fetch WhatsApp Groups from Fonnte (Admin - Protected)
+app.get('/api/admin/wa-groups', requireAdminAuthAPI, async (req, res) => {
+  try {
+    const config = readConfig();
+    const fonnteToken = config.waGateway?.fonnteToken;
+    if (!fonnteToken) {
+      return res.status(400).json({ success: false, error: 'Token Fonnte belum dikonfigurasi.' });
+    }
+    const result = await fetchWhatsAppGroups(fonnteToken);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

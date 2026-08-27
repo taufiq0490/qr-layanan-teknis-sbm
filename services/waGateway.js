@@ -1,11 +1,18 @@
 const { readConfig } = require('./storage');
 
 /**
- * Format phone number to standard format (e.g. 0812... -> 62812...)
+ * Format phone number or WhatsApp group target
+ * (e.g. 0812... -> 62812..., but preserve 120363xxx@g.us)
  */
-function normalizePhoneNumber(phone, defaultCountryCode = '62') {
-  if (!phone) return '';
-  let cleaned = phone.replace(/[^0-9]/g, '');
+function normalizePhoneNumber(target, defaultCountryCode = '62') {
+  if (!target) return '';
+  let str = String(target).trim();
+  // WhatsApp Group ID format
+  if (str.includes('@g.us')) {
+    return str;
+  }
+  // Standard phone number
+  let cleaned = str.replace(/[^0-9]/g, '');
   if (cleaned.startsWith('0')) {
     cleaned = defaultCountryCode + cleaned.substring(1);
   }
@@ -13,7 +20,46 @@ function normalizePhoneNumber(phone, defaultCountryCode = '62') {
 }
 
 /**
- * Send WhatsApp notification to all configured staff numbers
+ * Fetch WhatsApp Groups associated with the connected Fonnte device
+ */
+async function fetchWhatsAppGroups(fonnteToken) {
+  if (!fonnteToken) {
+    return { success: false, error: 'Token Fonnte belum dikonfigurasi.' };
+  }
+  try {
+    // 1. Sync latest groups from WhatsApp device
+    await fetch('https://api.fonnte.com/fetch-group', {
+      method: 'POST',
+      headers: { 'Authorization': fonnteToken }
+    }).catch(() => null);
+
+    // 2. Retrieve the synced groups
+    const response = await fetch('https://api.fonnte.com/get-whatsapp-group', {
+      method: 'POST',
+      headers: {
+        'Authorization': fonnteToken
+      }
+    });
+    const data = await response.json();
+    if (data.status === true && Array.isArray(data.data)) {
+      return { success: true, groups: data.data };
+    }
+    // Handle when device has no groups registered yet
+    if (data.reason && data.reason.toLowerCase().includes('no whatsapp group')) {
+      return {
+        success: true,
+        groups: [],
+        message: 'Nomor WhatsApp Anda saat ini belum terdaftar di dalam grup WhatsApp manapun di Fonnte.'
+      };
+    }
+    return { success: false, error: data.reason || data.message || 'Gagal mengambil daftar grup.' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Send WhatsApp notification to all configured staff numbers / group IDs
  */
 async function sendClassroomAlert({ room, category, notes, ticketId }) {
   const config = readConfig();
@@ -77,7 +123,7 @@ async function sendClassroomAlert({ room, category, notes, ticketId }) {
       if (!normalizedTargets) {
         return {
           success: false,
-          error: 'Tidak ada nomor WhatsApp staf yang valid terdaftar.'
+          error: 'Tidak ada nomor WhatsApp atau ID Grup yang valid terdaftar.'
         };
       }
 
@@ -161,5 +207,6 @@ async function sendClassroomAlert({ room, category, notes, ticketId }) {
 
 module.exports = {
   sendClassroomAlert,
-  normalizePhoneNumber
+  normalizePhoneNumber,
+  fetchWhatsAppGroups
 };

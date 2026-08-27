@@ -13,14 +13,14 @@
     "provider": "fonnte",
     "fonnteToken": "TxGywNUAMtKAdzKrCZoS",
     "staffNumbers": [
-      "087854277345"
+      "120363044455879559@g.us"
     ],
     "countryCode": "62",
     "webhookUrl": ""
   },
   "adminPassword": "Bismillah.1",
   "claimBaseUrl": "https://qr-layanan-teknis-sbm.vercel.app",
-  "notificationChannel": "telegram",
+  "notificationChannel": "fonnte",
   "telegramGateway": {
     "enabled": true,
     "botToken": "8781937865:AAFn1t51UoKhKj2JsUcCSPOxUMD1RTCU-8U",

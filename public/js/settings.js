@@ -98,6 +98,86 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Error loading settings:', err);
   }
 
+  // Global Helper: Fetch WhatsApp Groups from Fonnte
+  window.fetchWhatsAppGroups = async function() {
+    const btnFetchWAGroups = document.getElementById('btnFetchWAGroups');
+    const detectedWAGroupsBox = document.getElementById('detectedWAGroupsBox');
+    const detectedWAGroupsList = document.getElementById('detectedWAGroupsList');
+
+    if (btnFetchWAGroups) {
+      btnFetchWAGroups.disabled = true;
+      btnFetchWAGroups.textContent = '⏳ Mengambil grup...';
+    }
+
+    try {
+      const res = await fetch('/api/admin/wa-groups', {
+        headers: getAuthHeaders()
+      });
+      const data = await res.json();
+
+      if (data.success && Array.isArray(data.groups) && data.groups.length > 0) {
+        if (detectedWAGroupsBox) detectedWAGroupsBox.style.display = 'block';
+        if (detectedWAGroupsList) {
+          detectedWAGroupsList.innerHTML = data.groups.map(g => {
+            const gid = g.id || g.jid || '';
+            const gname = g.name || g.subject || 'Grup Tanpa Nama';
+            return `
+              <div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #D1FAE5; font-size: 0.82rem;">
+                <div>
+                  <strong style="color: #065F46;">💬 ${escapeHTML(gname)}</strong>
+                  <div style="font-size: 0.74rem; color: #64748B; font-family: monospace;">${escapeHTML(gid)}</div>
+                </div>
+                <button type="button" class="btn btn-outline" onclick="window.addWAGroupToTargets('${escapeHTML(gid)}')" style="font-size: 0.74rem; padding: 4px 10px; height: auto;">
+                  ➕ Pilih Grup Ini
+                </button>
+              </div>
+            `;
+          }).join('');
+        }
+      } else if (data.success && Array.isArray(data.groups) && data.groups.length === 0) {
+        if (detectedWAGroupsBox) {
+          detectedWAGroupsBox.style.display = 'block';
+          detectedWAGroupsList.innerHTML = `
+            <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #FED7AA; font-size: 0.82rem; color: #9A3412;">
+              <strong>ℹ️ Belum Ada Grup Terdeteksi di Fonnte:</strong>
+              <div style="margin-top: 4px; font-size: 0.78rem; line-height: 1.4; color: #475569;">
+                1. Pastikan nomor WhatsApp Anda di Fonnte sudah masuk ke dalam Grup WA di HP Anda.<br>
+                2. Anda juga bisa melihat ID Grup di <strong><a href="https://dashboard.fonnte.com" target="_blank" style="color: #0284C7; text-decoration: underline;">dashboard.fonnte.com</a> ➔ menu Group</strong> lalu tempelkan manual pada kolom di atas.
+              </div>
+            </div>
+          `;
+        }
+      } else {
+        alert('❌ Gagal mengambil grup WhatsApp: ' + (data.error || 'Pastikan token Fonnte valid & terhubung ke WhatsApp.'));
+      }
+    } catch (err) {
+      alert('❌ Terjadi kesalahan saat menghubungi server: ' + err.message);
+    } finally {
+      if (btnFetchWAGroups) {
+        btnFetchWAGroups.disabled = false;
+        btnFetchWAGroups.textContent = '👥 Cari Group WA Saya';
+      }
+    }
+  };
+
+  // Global Helper: Add Group ID to input
+  window.addWAGroupToTargets = function(groupId) {
+    if (!groupId) return;
+    const staffNumbersInput = document.getElementById('staffNumbersInput');
+    if (!staffNumbersInput) return;
+    const currentVal = staffNumbersInput.value.trim();
+    if (!currentVal) {
+      staffNumbersInput.value = groupId;
+    } else {
+      const parts = currentVal.split(',').map(s => s.trim()).filter(Boolean);
+      if (!parts.includes(groupId)) {
+        parts.push(groupId);
+        staffNumbersInput.value = parts.join(', ');
+      }
+    }
+    alert(`✅ ID Group "${groupId}" berhasil ditambahkan ke daftar penerima notifikasi!`);
+  };
+
   // Button: Get current location for Geofencing
   const btnGetCurrentLocation = document.getElementById('btnGetCurrentLocation');
   if (btnGetCurrentLocation) {

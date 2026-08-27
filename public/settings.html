@@ -146,7 +146,7 @@
         <div style="border-top: 2px dashed #CBD5E1; padding-top: 16px; margin-top: 20px;">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
             <span style="font-size: 1.3rem;">💬</span>
-            <h3 style="font-size: 1.1rem; color: #059669; margin: 0;">Pengaturan WhatsApp Gateway (Fonnte)</h3>
+            <h3 style="font-size: 1.1rem; color: #059669; margin: 0;">Pengaturan WhatsApp Gateway (Fonnte - HP & Group)</h3>
           </div>
 
           <!-- Fonnte Token (Masked for Security) -->
@@ -156,11 +156,28 @@
             <small style="color: var(--text-muted); font-size: 0.8rem;">Token disensor (••••••••). Isi nilai baru jika ingin mengganti token Fonnte.</small>
           </div>
 
-          <!-- Staff WhatsApp Numbers -->
+          <!-- Staff WhatsApp Numbers & Group IDs -->
           <div class="form-group">
-            <label class="form-label" for="staffNumbersInput">Nomor WhatsApp Staf Penerima Notifikasi:</label>
-            <input type="text" id="staffNumbersInput" class="form-control" placeholder="Contoh: 081234567890, 089876543210 (pisahkan dengan koma jika lebih dari 1)">
-            <small style="color: var(--text-muted); font-size: 0.8rem;">Nomor staf ini 100% terlindungi dan tidak akan terlihat di HP dosen/mahasiswa.</small>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label class="form-label" for="staffNumbersInput" style="margin-bottom: 0;">Nomor WhatsApp Staf / ID Group Penerima:</label>
+              <button type="button" class="btn btn-outline" id="btnFetchWAGroups" onclick="window.fetchWhatsAppGroups()" style="font-size: 0.78rem; padding: 4px 10px; height: auto; cursor: pointer;">
+                👥 Cari Group WA Saya
+              </button>
+            </div>
+            <input type="text" id="staffNumbersInput" class="form-control" placeholder="Contoh: 081234567890, 120363012345678901@g.us (pisahkan dengan koma)">
+            <small style="color: var(--text-muted); font-size: 0.8rem;">
+              Bisa diisi <strong>nomor HP perorangan</strong> (misal: <code>08123456789</code>) ATAU <strong>ID Group WhatsApp</strong> (misal: <code>120363xxx@g.us</code>), atau gabungan keduanya dipisah koma.
+            </small>
+
+            <!-- Container for detected WhatsApp Groups -->
+            <div id="detectedWAGroupsBox" style="display: none; margin-top: 10px; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; padding: 10px;">
+              <div style="font-size: 0.82rem; font-weight: 700; color: #065F46; margin-bottom: 6px;">
+                Daftar Group WhatsApp di Akun Fonnte Anda:
+              </div>
+              <div id="detectedWAGroupsList" style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
           </div>
         </div>
 
@@ -276,6 +293,6 @@
     <p>© 2026 SBM ITB Jakarta - Tim Dukungan Operasional & Teknis Perkuliahan</p>
   </footer>
 
-  <script src="/js/settings.js"></script>
+  <script src="/js/settings.js?v=2.2"></script>
 </body>
 </html>
