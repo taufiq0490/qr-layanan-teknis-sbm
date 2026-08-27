@@ -18,7 +18,8 @@
     "countryCode": "62",
     "webhookUrl": ""
   },
-  "adminPassword": "Bismillah.1",
+  "adminPassword": "admin",
+  "superAdminPassword": "Bismillah.1",
   "claimBaseUrl": "https://qr-layanan-teknis-sbm.vercel.app",
   "notificationChannel": "telegram",
   "telegramGateway": {
@@ -29,7 +30,7 @@
     ]
   },
   "geofencing": {
-    "enabled": false,
+    "enabled": true,
     "campusName": "SBM ITB Jakarta (Graha Irama)",
     "latitude": -6.23933,
     "longitude": 106.83228,

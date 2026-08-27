@@ -7,37 +7,49 @@
   <link rel="stylesheet" href="/css/style.css">
   <!-- Chart.js CDN for interactive visual charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS CDN for Genuine Native Excel (.xlsx) Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
   <!-- Navbar (Hidden on print) -->
   <header class="navbar no-print">
-    <div class="nav-brand">
-      <span class="brand-badge">SBM ITB</span>
+    <a href="/admin" class="nav-brand">
+      <img src="/images/logo-sbm-itb.png" alt="SBM ITB Logo" class="brand-logo-img">
       <div class="brand-text">
-        <h1>Laporan & Statistik Layanan Teknis</h1>
+        <h1>Layanan Teknis Kelas</h1>
         <p>Kampus Jakarta</p>
       </div>
+    </a>
+    <div class="nav-right-wrap">
+      <nav class="nav-links">
+        <a href="/" class="nav-link">🏠 Portal Ruangan</a>
+        <a href="/admin" class="nav-link">📊 Dashboard</a>
+        <a href="/admin/reports" class="nav-link active">📈 Laporan & Grafik</a>
+        <a href="/admin/print-qr" class="nav-link">🖨️ Cetak QR</a>
+        <a href="/admin/settings" class="nav-link">⚙️ Pengaturan</a>
+      </nav>
+      <div class="nav-user-section">
+        <span id="userRoleBadge" class="role-badge admin">👤 Staf</span>
+        <a href="javascript:void(0)" onclick="handleLogout()" class="btn-nav-logout" title="Keluar sesi">🚪 Logout</a>
+      </div>
     </div>
-    <nav class="nav-links">
-      <a href="/" class="nav-link">🏠 Portal Ruangan</a>
-      <a href="/admin/print-qr" class="nav-link">🖨️ Cetak Kartu QR</a>
-      <a href="/admin" class="nav-link">📊 Dashboard</a>
-      <a href="/admin/reports" class="nav-link active">📈 Laporan & Grafik</a>
-      <a href="/admin/settings" class="nav-link">⚙️ Pengaturan WA</a>
-      <a href="javascript:void(0)" onclick="handleLogout()" class="nav-link" style="color: #FCA5A5;">🚪 Logout</a>
-    </nav>
   </header>
 
   <main class="container">
     
     <!-- Official Print Header (Visible during Print / PDF Export) -->
-    <div class="official-print-header">
-      <div class="kop-title">SEKOLAH BISNIS DAN MANAJEMEN - INSTITUT TEKNOLOGI BANDUNG</div>
-      <div class="kop-sub">Kampus Jakarta • Laporan Rekapitulasi & Statistik Panggilan Dukungan Teknis Kelas</div>
-      <div class="kop-meta">
-        <span id="printReportPeriod">Periode Laporan: Semua Data</span>
-        <span id="printGeneratedDate">Dicetak pada: -</span>
+    <div class="official-print-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0F2C59; padding-bottom: 12px; margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <img src="/images/logo-sbm-itb.png" alt="SBM ITB Logo" style="height: 48px; object-fit: contain;">
+        <div>
+          <div class="kop-title" style="font-size: 1.05rem; font-weight: 800; color: #0F2C59; margin: 0;">SEKOLAH BISNIS DAN MANAJEMEN - INSTITUT TEKNOLOGI BANDUNG</div>
+          <div class="kop-sub" style="font-size: 0.82rem; color: #475569; margin-top: 2px;">Kampus Jakarta • Laporan Rekapitulasi &amp; Statistik Panggilan Dukungan Teknis Kelas</div>
+        </div>
+      </div>
+      <div class="kop-meta" style="text-align: right; font-size: 0.75rem; color: #64748B; flex-shrink: 0;">
+        <div id="printReportPeriod">Periode: Semua Data</div>
+        <div id="printGeneratedDate">Dicetak pada: -</div>
       </div>
     </div>
 
@@ -45,17 +57,17 @@
     <div class="reports-header no-print">
       <div>
         <h2 style="font-size: 1.25rem; color: var(--primary); font-weight: 800; margin-bottom: 2px;">
-          📈 Rekapitulasi & Analitik Layanan Teknis
+          📈 Rekapitulasi & Riwayat Pekerjaan Teknis
         </h2>
         <p style="color: var(--text-muted); font-size: 0.8rem;">
-          Analisis frekuensi kendala, performa penanganan, dan ekspor laporan berkala.
+          Analisis frekuensi kendala, performa penanganan, dan ekspor tabel history pekerjaan ke Excel.
         </p>
       </div>
-      <div class="export-actions">
-        <button class="btn btn-outline" id="btnOpenGoogleSheet" onclick="window.handleOpenGoogleSheet()" style="background: white; border-color: #0F9D58; color: #0F9D58; font-weight: 700; padding: 6px 12px; font-size: 0.82rem; cursor: pointer;">
-          📊 Buka Google Sheet Laporan
+      <div class="export-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button class="btn btn-success" id="btnExportExcel" onclick="window.exportToExcel()" style="background: #107C41; border-color: #107C41; color: white; font-weight: 700; padding: 6px 14px; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="Unduh data riwayat pekerjaan format Excel (.xlsx)">
+          📊 Ekspor ke Excel (.xlsx)
         </button>
-        <button class="btn btn-primary" id="btnExportPDF" onclick="window.exportToPDF()" style="font-weight: 700; padding: 6px 12px; font-size: 0.82rem; cursor: pointer;">
+        <button class="btn btn-primary" id="btnExportPDF" onclick="window.exportToPDF()" style="font-weight: 700; padding: 6px 14px; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="Cetak laporan ke PDF">
           📄 Cetak / Ekspor PDF
         </button>
       </div>
@@ -254,82 +266,12 @@
       </div>
     </div>
 
-    <!-- Modal: Google Sheet Live Report (Viewer & Charts) -->
-    <div class="modal-backdrop no-print" id="googleSheetModal">
-      <div class="modal-card" style="max-width: 580px;">
-        <div class="modal-header">
-          <h3><span>📊</span> Integrasi Google Sheet & Grafik Live</h3>
-          <button class="modal-close-btn" id="btnModalGSheetClose" onclick="window.closeGoogleSheetModal()" type="button" title="Tutup">✕</button>
-        </div>
-        <div class="modal-body" style="padding: 20px;">
-          <!-- Connected Google Sheet Link (if configured) -->
-          <div id="gsheetDirectBox" style="display: none; background: #ECFDF5; border: 1.5px solid #10B981; border-radius: 10px; padding: 14px; margin-bottom: 16px;">
-            <div style="font-weight: 700; color: #065F46; font-size: 0.9rem; margin-bottom: 6px;">
-              ✅ Spreadsheet Resmi Telah Terhubung:
-            </div>
-            <a href="#" id="linkGSheetTarget" target="_blank" class="btn btn-success" style="width: 100%; text-decoration: none; padding: 10px; font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
-              <span>🚀 Buka Google Sheet Laporan</span> ➔
-            </a>
-          </div>
-
-          <div style="font-size: 0.88rem; color: #334155; margin-bottom: 12px; line-height: 1.5;">
-            Laporan data panggilan kelas dan grafiknya dapat dibuat dan dipantau secara otomatis di Google Sheet (siapapun dapat melihat tanpa login).
-          </div>
-
-          <!-- Step 1: Data Auto-Sync Formula -->
-          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; margin-bottom: 12px;">
-            <div style="font-weight: 700; font-size: 0.85rem; color: var(--primary); margin-bottom: 4px;">
-              1️⃣ Tarik Data Live Otomatis (Tab: <code>Data Tiket</code>)
-            </div>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">
-              Buka Google Sheet, lalu tempel rumus ini pada cell <strong>A1</strong>:
-            </p>
-            <div style="display: flex; gap: 6px; margin-bottom: 6px;">
-              <input type="text" id="importDataFormula" class="form-control" readonly style="font-family: monospace; font-size: 0.78rem; background: white;" value="">
-              <button type="button" class="btn btn-outline" id="btnCopyFormula" onclick="window.copyFormula('importDataFormula', 'btnCopyFormula')" style="padding: 4px 10px; font-size: 0.78rem; white-space: nowrap;">
-                📋 Salin
-              </button>
-            </div>
-          </div>
-
-          <!-- Step 2: Live Charts & Pivot Formula -->
-          <div style="background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 10px; padding: 14px; margin-bottom: 16px;">
-            <div style="font-weight: 700; font-size: 0.85rem; color: #92400E; margin-bottom: 4px;">
-              2️⃣ Tambahkan Grafik Visual di Google Sheet (Tab: <code>Grafik</code>)
-            </div>
-            <p style="font-size: 0.8rem; color: #78350F; margin-bottom: 8px;">
-              Di tab kedua Google Sheet, tempel rumus ini di cell <strong>A1</strong> untuk membuat tabel rekap otomatis per Kategori & Ruangan:
-            </p>
-            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-              <input type="text" id="chartQueryFormula" class="form-control" readonly style="font-family: monospace; font-size: 0.78rem; background: white;" value='=QUERY(A:K, "SELECT H, COUNT(A) WHERE H IS NOT NULL GROUP BY H LABEL H &apos;Kategori Kendala&apos;, COUNT(A) &apos;Jumlah&apos;", 1)'>
-              <button type="button" class="btn btn-outline" id="btnCopyChartFormula" onclick="window.copyFormula('chartQueryFormula', 'btnCopyChartFormula')" style="padding: 4px 10px; font-size: 0.78rem; white-space: nowrap;">
-                📋 Salin
-              </button>
-            </div>
-            <div style="font-size: 0.78rem; color: #92400E;">
-              💡 <em>Setelah ditempel, blok tabel tersebut lalu klik <strong>Sisipkan ➔ Diagram (Insert ➔ Chart)</strong> untuk memunculkan Pie Chart & Bar Chart!</em>
-            </div>
-          </div>
-
-          <!-- Modal Action Buttons -->
-          <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
-            <a href="https://sheets.new" target="_blank" class="btn btn-outline" style="font-size: 0.82rem; padding: 6px 12px;">
-              ➕ Buka Google Sheet Baru
-            </a>
-            <a href="/admin/settings" class="btn btn-primary" style="font-size: 0.82rem; padding: 6px 12px;">
-              ⚙️ Simpan Link di Pengaturan
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-
   </main>
 
   <footer class="footer no-print">
     <p>© 2026 SBM ITB Jakarta - Tim Dukungan Operasional & Teknis Perkuliahan</p>
   </footer>
 
-  <script src="/js/reports.js?v=2.2"></script>
+  <script src="/js/reports.js?v=2.3"></script>
 </body>
 </html>

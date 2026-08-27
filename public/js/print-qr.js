@@ -8,13 +8,150 @@ function escapeHTML(str) {
     .replace(/'/g, '&#039;');
 }
 
-async function handleLogout() {
-  if (confirm('Apakah Anda yakin ingin keluar dari sesi admin?')) {
-    try {
-      await fetch('/api/admin/logout', { method: 'POST' });
-    } catch (e) {}
-    localStorage.removeItem('admin_token');
-    window.location.href = '/login';
+function getAuthHeaders() {
+  const token = localStorage.getItem('admin_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['x-admin-token'] = token;
+  return headers;
+}
+
+// --- SUPER ADMIN AUTH MODAL HELPER ---
+window.requestSuperAdminAuth = function(options = {}) {
+  const { 
+    title = 'Otorisasi Super Admin', 
+    desc = 'Masukkan kata sandi Super Admin untuk melanjutkan tindakan ini.', 
+    onSuccess 
+  } = options;
+
+  return new Promise((resolve) => {
+    let modal = document.getElementById('superAdminAuthModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'superAdminAuthModal';
+      modal.className = 'superadmin-modal-overlay';
+      modal.innerHTML = `
+        <div class="superadmin-modal-card">
+          <div class="superadmin-modal-icon">🔒</div>
+          <h3 class="superadmin-modal-title" id="saModalTitle">Otorisasi Super Admin</h3>
+          <p class="superadmin-modal-desc" id="saModalDesc">Masukkan kata sandi Super Admin untuk melanjutkan.</p>
+          
+          <div id="saModalError" class="superadmin-modal-error"></div>
+
+          <form id="saModalForm">
+            <div class="superadmin-modal-input-group">
+              <label class="superadmin-modal-label" for="saPasswordInput">Kata Sandi Super Admin:</label>
+              <input type="password" id="saPasswordInput" class="superadmin-modal-input" placeholder="Masukkan kata sandi super admin..." required autocomplete="current-password">
+            </div>
+            
+            <div class="superadmin-modal-actions">
+              <button type="button" class="superadmin-modal-btn-cancel" id="saModalCancel">Batal</button>
+              <button type="submit" class="superadmin-modal-btn-submit" id="saModalSubmit">Verifikasi ➔</button>
+            </div>
+          </form>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const cancelBtn = modal.querySelector('#saModalCancel');
+      cancelBtn.addEventListener('click', () => {
+        modal.classList.remove('active');
+        resolve(false);
+      });
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('active');
+          resolve(false);
+        }
+      });
+    }
+
+    const titleEl = modal.querySelector('#saModalTitle');
+    const descEl = modal.querySelector('#saModalDesc');
+    const errorEl = modal.querySelector('#saModalError');
+    const inputEl = modal.querySelector('#saPasswordInput');
+    const formEl = modal.querySelector('#saModalForm');
+    const submitBtn = modal.querySelector('#saModalSubmit');
+
+    titleEl.textContent = title;
+    descEl.textContent = desc;
+    errorEl.style.display = 'none';
+    errorEl.textContent = '';
+    inputEl.value = '';
+
+    modal.classList.add('active');
+    setTimeout(() => inputEl.focus(), 50);
+
+    formEl.onsubmit = async (e) => {
+      e.preventDefault();
+      const password = inputEl.value;
+      if (!password) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Memverifikasi...';
+      errorEl.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/admin/verify-superadmin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          if (data.token) {
+            localStorage.setItem('admin_token', data.token);
+            localStorage.setItem('admin_role', 'superadmin');
+          }
+          modal.classList.remove('active');
+          updateRoleBadgeUI('superadmin');
+          if (typeof onSuccess === 'function') onSuccess();
+          resolve(true);
+        } else {
+          errorEl.textContent = '❌ ' + (data.error || 'Kata sandi Super Admin salah.');
+          errorEl.style.display = 'block';
+          inputEl.focus();
+        }
+      } catch (err) {
+        errorEl.textContent = '❌ Terjadi kesalahan jaringan. Silakan coba lagi.';
+        errorEl.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Verifikasi ➔';
+      }
+    };
+  });
+};
+
+window.ensureSuperAdmin = async function(options = {}) {
+  try {
+    const res = await fetch('/api/admin/check-auth', {
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (data.isSuperAdmin) {
+      updateRoleBadgeUI('superadmin');
+      if (typeof options.onSuccess === 'function') options.onSuccess();
+      return true;
+    } else {
+      updateRoleBadgeUI('admin');
+    }
+  } catch (e) {}
+
+  return await window.requestSuperAdminAuth(options);
+};
+
+function updateRoleBadgeUI(role) {
+  const badgeContainer = document.getElementById('userRoleBadge');
+  if (badgeContainer) {
+    if (role === 'superadmin') {
+      badgeContainer.className = 'role-badge superadmin';
+      badgeContainer.innerHTML = '👑 Super Admin';
+    } else {
+      badgeContainer.className = 'role-badge admin';
+      badgeContainer.innerHTML = '👤 Staf';
+    }
   }
 }
 
@@ -95,7 +232,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   roomSelectFilter.addEventListener('change', renderCards);
 
   btnPrintCurrentView.addEventListener('click', () => {
-    window.print();
+    window.ensureSuperAdmin({
+      title: 'Otorisasi Cetak Kartu QR Kelas',
+      desc: 'Pencetakan kartu QR kelas dilindungi. Masukkan kata sandi Super Admin untuk melanjutkan.',
+      onSuccess: () => {
+        window.print();
+      }
+    });
   });
 
   window.onafterprint = () => {
@@ -124,8 +267,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       cardEl.innerHTML = `
         <div>
-          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px;">
-            <span style="background: #0F2C59; color: #DDA74F; font-weight: 800; font-size: 0.85rem; padding: 4px 10px; border-radius: 6px; border: 1.5px solid #DDA74F; letter-spacing: 0.5px;">🏛️ SBM ITB</span>
+          <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+            <img src="/images/logo-sbm-itb.png" alt="SBM ITB Logo" style="height: 40px; max-width: 90%; object-fit: contain;">
           </div>
           <div class="qr-header-subtitle">SEKOLAH BISNIS DAN MANAJEMEN</div>
           <div class="qr-header-title">INSTITUT TEKNOLOGI BANDUNG</div>
@@ -254,29 +397,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     ctx.closePath();
   }
 
-  // Global helper functions
+  // Global helper functions - Super Admin Protected
   window.printSingleRoom = (cardElementId) => {
-    document.body.classList.add('print-single-mode');
-    document.querySelectorAll('.qr-card-design').forEach(card => card.classList.remove('print-target-card'));
-    const targetCard = document.getElementById(cardElementId);
-    if (targetCard) {
-      targetCard.classList.add('print-target-card');
-      setTimeout(() => {
-        window.print();
-      }, 100);
-    }
+    window.ensureSuperAdmin({
+      title: 'Otorisasi Cetak Kartu QR Ruangan',
+      desc: 'Pencetakan kartu QR kelas dilindungi. Masukkan kata sandi Super Admin untuk melanjutkan.',
+      onSuccess: () => {
+        document.body.classList.add('print-single-mode');
+        document.querySelectorAll('.qr-card-design').forEach(card => card.classList.remove('print-target-card'));
+        const targetCard = document.getElementById(cardElementId);
+        if (targetCard) {
+          targetCard.classList.add('print-target-card');
+          setTimeout(() => {
+            window.print();
+          }, 100);
+        }
+      }
+    });
   };
 
   window.downloadQrImage = (canvasContainerId, roomName) => {
-    const containerEl = document.getElementById(canvasContainerId);
-    const canvas = containerEl ? containerEl.querySelector('canvas') : null;
-    if (canvas) {
-      const link = document.createElement('a');
-      link.download = `QR_Layanan_SBM_ITB_${roomName.replace(/\s+/g, '_')}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    } else {
-      alert('Gagal mendownload gambar QR.');
-    }
+    window.ensureSuperAdmin({
+      title: 'Otorisasi Download QR Ruangan',
+      desc: 'Pengunduhan file gambar QR code dilindungi. Masukkan kata sandi Super Admin untuk melanjutkan.',
+      onSuccess: () => {
+        const containerEl = document.getElementById(canvasContainerId);
+        const canvas = containerEl ? containerEl.querySelector('canvas') : null;
+        if (canvas) {
+          const link = document.createElement('a');
+          link.download = `QR_Layanan_SBM_ITB_${roomName.replace(/\s+/g, '_')}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        } else {
+          alert('Gagal mendownload gambar QR.');
+        }
+      }
+    });
   };
 });

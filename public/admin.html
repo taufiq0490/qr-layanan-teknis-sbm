@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard Monitoring Tiket - SBM ITB Jakarta</title>
   <link rel="stylesheet" href="/css/style.css">
+  <!-- SheetJS CDN for Genuine Native Excel (.xlsx) Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     .stats-grid {
       display: grid;
@@ -90,24 +92,95 @@
 
   <!-- Navbar -->
   <header class="navbar">
-    <div class="nav-brand">
-      <span class="brand-badge">SBM ITB</span>
+    <a href="/admin" class="nav-brand">
+      <img src="/images/logo-sbm-itb.png" alt="SBM ITB Logo" class="brand-logo-img">
       <div class="brand-text">
-        <h1>Dashboard Dukungan Teknis</h1>
+        <h1>Layanan Teknis Kelas</h1>
         <p>Kampus Jakarta</p>
       </div>
+    </a>
+    <div class="nav-right-wrap">
+      <nav class="nav-links">
+        <a href="/" class="nav-link">🏠 Portal Ruangan</a>
+        <a href="/admin" class="nav-link active">📊 Dashboard</a>
+        <a href="/admin/reports" class="nav-link">📈 Laporan & Grafik</a>
+        <a href="/admin/print-qr" class="nav-link">🖨️ Cetak QR</a>
+        <a href="/admin/settings" class="nav-link">⚙️ Pengaturan</a>
+      </nav>
+      <div class="nav-user-section">
+        <span id="userRoleBadge" class="role-badge admin">👤 Staf</span>
+        <a href="javascript:void(0)" onclick="handleLogout()" class="btn-nav-logout" title="Keluar sesi">🚪 Logout</a>
+      </div>
     </div>
-    <nav class="nav-links">
-      <a href="/" class="nav-link">🏠 Portal Ruangan</a>
-      <a href="/admin/print-qr" class="nav-link">🖨️ Cetak Kartu QR</a>
-      <a href="/admin" class="nav-link active">📊 Dashboard</a>
-      <a href="/admin/reports" class="nav-link">📈 Laporan & Grafik</a>
-      <a href="/admin/settings" class="nav-link">⚙️ Pengaturan WA</a>
-      <a href="javascript:void(0)" onclick="handleLogout()" class="nav-link" style="color: #FCA5A5;">🚪 Logout</a>
-    </nav>
   </header>
 
   <main class="container">
+    
+    <!-- Audio Autoplay Unlock Banner (Muncul jika browser memblokir audio otomatis) -->
+    <div id="audioUnlockBanner" class="audio-unlock-banner" onclick="window.SoundNotifier.testSound()">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.3rem;">🔊</span>
+        <span><strong>Perhatian Browser:</strong> Klik di sini untuk mengaktifkan suara notifikasi panggilan darurat.</span>
+      </div>
+      <button class="btn-xs btn-primary" style="background: #D97706; color: white;">Aktifkan Suara</button>
+    </div>
+
+    <!-- Audio Control & Notification Center Bar -->
+    <div class="audio-control-bar">
+      <div class="audio-info-group">
+        <div id="audioStatusBadge" class="audio-status-pill">
+          <span class="sound-wave-anim">
+            <span class="sound-wave-bar"></span>
+            <span class="sound-wave-bar"></span>
+            <span class="sound-wave-bar"></span>
+            <span class="sound-wave-bar"></span>
+          </span>
+          <span id="audioStatusText">Suara Panggilan: AKTIF</span>
+        </div>
+        <span style="font-size: 0.85rem; color: #CBD5E1; display: none;" id="activeAlarmIndicator">
+          🚨 <strong style="color: #FCD34D;">Alarm Berbunyi...</strong>
+        </span>
+      </div>
+
+      <div class="audio-controls-wrap">
+        <!-- Pilihan Jenis Nada -->
+        <select id="selectSoundType" class="audio-select" title="Pilih Nada Notifikasi">
+          <option value="dingdong">🔔 Ding-Dong Kelas (Merdu)</option>
+          <option value="emergency">🚨 Sirene Siaga (Darurat)</option>
+          <option value="marimba">🎶 Melodi Marimba (Modern)</option>
+          <option value="electronic">📟 Bel Elektronik (Intercom)</option>
+          <option value="radar">📡 Radar Ping (Sonar)</option>
+        </select>
+
+        <!-- Slider Volume -->
+        <div class="audio-volume-wrap" title="Atur Volume Suara">
+          <span style="font-size: 0.85rem;">🔉</span>
+          <input type="range" id="sliderVolume" class="audio-volume-slider" min="0" max="1" step="0.05" value="0.8">
+          <span id="volumePercentText" style="font-size: 0.75rem; font-weight: 700; min-width: 28px;">80%</span>
+        </div>
+
+        <!-- Tombol Uji Coba Nada -->
+        <button type="button" id="btnTestSound" class="btn-audio-action" title="Putar contoh nada notifikasi">
+          <span>▶️ Tes Nada</span>
+        </button>
+
+        <!-- Tombol Mute/Unmute -->
+        <button type="button" id="btnToggleMute" class="btn-audio-action" title="Matikan/Nyalakan Suara">
+          <span id="muteBtnIcon">🔊</span> <span id="muteBtnText">Mute</span>
+        </button>
+
+        <!-- Checkbox Ulangi Alarm -->
+        <label class="audio-loop-label" title="Alarm akan terus berbunyi setiap beberapa detik hingga staf mengambil tiket">
+          <input type="checkbox" id="chkLoopAlarm">
+          <span>🔁 Ulangi jika belum ditangani</span>
+        </label>
+
+        <!-- Tombol Izin Notifikasi Desktop -->
+        <button type="button" id="btnDesktopNotif" class="btn-audio-action" title="Aktifkan notifikasi pop-up desktop">
+          <span>🔔 Notif Desktop</span>
+        </button>
+      </div>
+    </div>
     
     <!-- Stats Row -->
     <div class="stats-grid">
@@ -148,7 +221,10 @@
           <span class="live-dot"></span>
           <h2 class="card-title" style="margin: 0;">Monitoring Panggilan Kelas Masuk</h2>
         </div>
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-outline" id="btnExportExcel" style="padding: 6px 12px; font-size: 0.85rem; color: #107C41; border-color: #107C41; font-weight: 700;">
+            📊 Ekspor Excel
+          </button>
           <button class="btn btn-outline" id="btnRefresh" style="padding: 6px 12px; font-size: 0.85rem;">
             🔄 Refresh Data
           </button>
@@ -202,6 +278,7 @@
     <p>© 2026 SBM ITB Jakarta - Tim Dukungan Operasional & Teknis Perkuliahan</p>
   </footer>
 
+  <script src="/js/audio-notifier.js"></script>
   <script src="/js/admin.js"></script>
 </body>
 </html>

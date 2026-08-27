@@ -33,6 +33,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const messageTemplate = document.getElementById('messageTemplate');
   const claimBaseUrl = document.getElementById('claimBaseUrl');
   const adminPasswordInput = document.getElementById('adminPasswordInput');
+  const superAdminPasswordInput = document.getElementById('superAdminPasswordInput');
+  const currentSuperAdminPasswordInput = document.getElementById('currentSuperAdminPasswordInput');
   const roomTagsContainer = document.getElementById('roomTagsContainer');
   const newRoomInput = document.getElementById('newRoomInput');
   const btnAddRoom = document.getElementById('btnAddRoom');
@@ -42,13 +44,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let currentRooms = [];
 
+  // Check Super Admin Auth
+  try {
+    const authRes = await fetch('/api/admin/check-auth', { headers: getAuthHeaders() });
+    const authData = await authRes.json();
+    if (!authData.authenticated) {
+      window.location.href = '/login?role=superadmin&redirect=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
+    if (!authData.isSuperAdmin) {
+      alert('⚠️ Akses Pengaturan Sistem dibatasi hanya untuk Super Admin. Silakan masukkan kata sandi Super Admin.');
+      window.location.href = '/login?role=superadmin&redirect=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
+    const badgeContainer = document.getElementById('userRoleBadge');
+    if (badgeContainer) {
+      badgeContainer.className = 'role-badge superadmin';
+      badgeContainer.innerHTML = '👑 Super Admin';
+    }
+  } catch (e) {}
+
   // Load Settings from API
   try {
     const res = await fetch('/api/admin/settings', {
       headers: getAuthHeaders()
     });
-    if (res.status === 401) {
-      window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+    if (res.status === 401 || res.status === 403) {
+      window.location.href = '/login?role=superadmin&redirect=' + encodeURIComponent(window.location.pathname);
       return;
     }
     const data = await res.json();
@@ -82,8 +104,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       messageTemplate.value = s.messageTemplate || "Mohon bantuan teknis di ruang {room} SEGERA!";
       if (claimBaseUrl) claimBaseUrl.value = s.claimBaseUrl || "https://qr-layanan-teknis-sbm.vercel.app";
-      const googleSheetUrlInput = document.getElementById('googleSheetUrl');
-      if (googleSheetUrlInput) googleSheetUrlInput.value = s.googleSheetUrl || "";
       currentRooms = s.rooms || [
         "Henk Uno",
         "Kirana Megatara 1",
@@ -97,6 +117,48 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.error('Error loading settings:', err);
   }
+
+  // Audio Notification Settings Binding
+  if (window.SoundNotifier) {
+    const sn = window.SoundNotifier;
+    const settingsSoundType = document.getElementById('settingsSoundType');
+    const settingsSoundVolume = document.getElementById('settingsSoundVolume');
+    const settingsVolPercent = document.getElementById('settingsVolPercent');
+    const settingsLoopAlarm = document.getElementById('settingsLoopAlarm');
+    const btnSettingsTestSound = document.getElementById('btnSettingsTestSound');
+
+    if (settingsSoundType) {
+      settingsSoundType.value = sn.soundType;
+      settingsSoundType.addEventListener('change', (e) => {
+        sn.setSoundType(e.target.value);
+      });
+    }
+
+    if (settingsSoundVolume) {
+      settingsSoundVolume.value = sn.volume;
+      if (settingsVolPercent) settingsVolPercent.textContent = Math.round(sn.volume * 100) + '%';
+
+      settingsSoundVolume.addEventListener('input', (e) => {
+        sn.setVolume(e.target.value);
+        if (settingsVolPercent) settingsVolPercent.textContent = Math.round(e.target.value * 100) + '%';
+      });
+    }
+
+    if (settingsLoopAlarm) {
+      settingsLoopAlarm.checked = sn.loopEnabled;
+      settingsLoopAlarm.addEventListener('change', (e) => {
+        sn.setLoopEnabled(e.target.checked);
+      });
+    }
+
+    if (btnSettingsTestSound) {
+      btnSettingsTestSound.addEventListener('click', () => {
+        const type = settingsSoundType ? settingsSoundType.value : sn.soundType;
+        sn.testSound(type);
+      });
+    }
+  }
+
 
   // Global Helper: Fetch WhatsApp Groups from Fonnte
   window.fetchWhatsAppGroups = async function() {
@@ -247,20 +309,31 @@ document.addEventListener('DOMContentLoaded', async () => {
       .filter(Boolean);
 
     const selectedChannel = document.querySelector('input[name="notificationChannel"]:checked')?.value || 'both';
-    const newPass = adminPasswordInput && adminPasswordInput.value.trim();
+    const newStaffPass = adminPasswordInput && adminPasswordInput.value.trim();
+    const newSuperPass = superAdminPasswordInput && superAdminPasswordInput.value.trim();
+    const currentSuperPass = currentSuperAdminPasswordInput && currentSuperAdminPasswordInput.value.trim();
+
+    // Check if user is attempting to change password
+    if ((newStaffPass || newSuperPass) && !currentSuperPass) {
+      alert('⚠️ Untuk mengubah kata sandi, Anda wajib memasukkan Kata Sandi Super Admin yang lama/saat ini terlebih dahulu.');
+      if (currentSuperAdminPasswordInput) {
+        currentSuperAdminPasswordInput.focus();
+      }
+      return;
+    }
 
     const geoEnabled = document.getElementById('geoEnabled');
     const geoLat = document.getElementById('geoLat');
     const geoLon = document.getElementById('geoLon');
     const geoRadius = document.getElementById('geoRadius');
-    const googleSheetUrlInput = document.getElementById('googleSheetUrl');
 
     const payload = {
       messageTemplate: messageTemplate.value.trim(),
       claimBaseUrl: claimBaseUrl ? claimBaseUrl.value.trim() : undefined,
-      googleSheetUrl: googleSheetUrlInput ? googleSheetUrlInput.value.trim() : undefined,
       notificationChannel: selectedChannel,
-      adminPassword: newPass || undefined,
+      currentSuperAdminPassword: currentSuperPass || undefined,
+      adminPassword: newStaffPass || undefined,
+      superAdminPassword: newSuperPass || undefined,
       rooms: currentRooms,
       waGateway: {
         provider: fonnteToken.value.trim() ? 'fonnte' : 'simulation',
@@ -286,18 +359,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         headers: getAuthHeaders(),
         body: JSON.stringify(payload)
       });
-      if (res.status === 401) {
-        window.location.href = '/login';
+      if (res.status === 401 || res.status === 403) {
+        window.location.href = '/login?role=superadmin&redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
       const data = await res.json();
       if (data.success) {
-        if (newPass) {
-          alert('✅ Pengaturan & Kata Sandi Admin baru berhasil disimpan! Silakan gunakan kata sandi baru saat login berikutnya.');
-        } else {
-          alert('✅ Pengaturan sistem, WhatsApp, & Telegram Bot berhasil disimpan!');
+        if (data.newToken) {
+          localStorage.setItem('admin_token', data.newToken);
         }
+        let msg = '✅ Pengaturan sistem, WhatsApp, & Telegram Bot berhasil disimpan!';
+        if (newSuperPass && newStaffPass) {
+          msg = '✅ Pengaturan, Kata Sandi Super Admin & Kata Sandi Staf baru berhasil diperbarui!';
+        } else if (newSuperPass) {
+          msg = '✅ Pengaturan & Kata Sandi Super Admin baru berhasil diperbarui!';
+        } else if (newStaffPass) {
+          msg = '✅ Pengaturan & Kata Sandi Staf baru berhasil diperbarui!';
+        }
+        alert(msg);
         if (adminPasswordInput) adminPasswordInput.value = '';
+        if (superAdminPasswordInput) superAdminPasswordInput.value = '';
+        if (currentSuperAdminPasswordInput) currentSuperAdminPasswordInput.value = '';
       } else {
         alert('❌ Gagal menyimpan: ' + data.error);
       }

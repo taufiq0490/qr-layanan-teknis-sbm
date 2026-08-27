@@ -40,7 +40,7 @@ Aplikasi akan berjalan di:
 - **Halaman Panggilan (Contoh Ruang Henk Uno)**: [http://localhost:3000/call?room=Henk%20Uno](http://localhost:3000/call?room=Henk%20Uno)
 - **Dashboard Monitoring Staf**: [http://localhost:3000/admin](http://localhost:3000/admin)
 - **Pusat Cetak Kartu QR**: [http://localhost:3000/admin/print-qr](http://localhost:3000/admin/print-qr)
-- **Pengaturan WA & Kontak**: [http://localhost:3000/admin/settings](http://localhost:3000/admin/settings)
+- **Pengaturan & Keamanan Sistem**: [http://localhost:3000/admin/settings](http://localhost:3000/admin/settings)
 
 ---
 
@@ -49,7 +49,7 @@ Aplikasi akan berjalan di:
 1. Buka situs [https://fonnte.com](https://fonnte.com) dan daftar akun gratis.
 2. Hubungkan nomor WhatsApp bot/staf pengirim dengan scan QR di menu Device Fonnte.
 3. Salin **API Token** dari Fonnte.
-4. Buka menu **Pengaturan WA** di aplikasi: [http://localhost:3000/admin/settings](http://localhost:3000/admin/settings)
+4. Buka menu **Pengaturan** di aplikasi: [http://localhost:3000/admin/settings](http://localhost:3000/admin/settings)
 5. Masukkan Token Fonnte dan Nomor WhatsApp Staf Teknis yang bertugas.
 6. Klik **Simpan Pengaturan**, lalu klik **Uji Coba Kirim WA**.
 

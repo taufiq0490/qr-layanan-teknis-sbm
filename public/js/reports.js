@@ -18,10 +18,156 @@ async function handleLogout() {
   }
 }
 
+function getAuthHeaders() {
+  const token = localStorage.getItem('admin_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['x-admin-token'] = token;
+  return headers;
+}
+
+// --- SUPER ADMIN AUTH MODAL HELPER ---
+window.requestSuperAdminAuth = function(options = {}) {
+  const { 
+    title = 'Otorisasi Super Admin', 
+    desc = 'Masukkan kata sandi Super Admin untuk melanjutkan tindakan ini.', 
+    onSuccess 
+  } = options;
+
+  return new Promise((resolve) => {
+    let modal = document.getElementById('superAdminAuthModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'superAdminAuthModal';
+      modal.className = 'superadmin-modal-overlay';
+      modal.innerHTML = `
+        <div class="superadmin-modal-card">
+          <div class="superadmin-modal-icon">🔒</div>
+          <h3 class="superadmin-modal-title" id="saModalTitle">Otorisasi Super Admin</h3>
+          <p class="superadmin-modal-desc" id="saModalDesc">Masukkan kata sandi Super Admin untuk melanjutkan.</p>
+          
+          <div id="saModalError" class="superadmin-modal-error"></div>
+
+          <form id="saModalForm">
+            <div class="superadmin-modal-input-group">
+              <label class="superadmin-modal-label" for="saPasswordInput">Kata Sandi Super Admin:</label>
+              <input type="password" id="saPasswordInput" class="superadmin-modal-input" placeholder="Masukkan kata sandi super admin..." required autocomplete="current-password">
+            </div>
+            
+            <div class="superadmin-modal-actions">
+              <button type="button" class="superadmin-modal-btn-cancel" id="saModalCancel">Batal</button>
+              <button type="submit" class="superadmin-modal-btn-submit" id="saModalSubmit">Verifikasi ➔</button>
+            </div>
+          </form>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const cancelBtn = modal.querySelector('#saModalCancel');
+      cancelBtn.addEventListener('click', () => {
+        modal.classList.remove('active');
+        resolve(false);
+      });
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('active');
+          resolve(false);
+        }
+      });
+    }
+
+    const titleEl = modal.querySelector('#saModalTitle');
+    const descEl = modal.querySelector('#saModalDesc');
+    const errorEl = modal.querySelector('#saModalError');
+    const inputEl = modal.querySelector('#saPasswordInput');
+    const formEl = modal.querySelector('#saModalForm');
+    const submitBtn = modal.querySelector('#saModalSubmit');
+
+    titleEl.textContent = title;
+    descEl.textContent = desc;
+    errorEl.style.display = 'none';
+    errorEl.textContent = '';
+    inputEl.value = '';
+
+    modal.classList.add('active');
+    setTimeout(() => inputEl.focus(), 50);
+
+    formEl.onsubmit = async (e) => {
+      e.preventDefault();
+      const password = inputEl.value;
+      if (!password) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Memverifikasi...';
+      errorEl.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/admin/verify-superadmin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          if (data.token) {
+            localStorage.setItem('admin_token', data.token);
+            localStorage.setItem('admin_role', 'superadmin');
+          }
+          modal.classList.remove('active');
+          updateRoleBadgeUI('superadmin');
+          if (typeof onSuccess === 'function') onSuccess();
+          resolve(true);
+        } else {
+          errorEl.textContent = '❌ ' + (data.error || 'Kata sandi Super Admin salah.');
+          errorEl.style.display = 'block';
+          inputEl.focus();
+        }
+      } catch (err) {
+        errorEl.textContent = '❌ Terjadi kesalahan jaringan. Silakan coba lagi.';
+        errorEl.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Verifikasi ➔';
+      }
+    };
+  });
+};
+
+window.ensureSuperAdmin = async function(options = {}) {
+  try {
+    const res = await fetch('/api/admin/check-auth', {
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (data.isSuperAdmin) {
+      updateRoleBadgeUI('superadmin');
+      if (typeof options.onSuccess === 'function') options.onSuccess();
+      return true;
+    } else {
+      updateRoleBadgeUI('admin');
+    }
+  } catch (e) {}
+
+  return await window.requestSuperAdminAuth(options);
+};
+
+function updateRoleBadgeUI(role) {
+  const badgeContainer = document.getElementById('userRoleBadge');
+  if (badgeContainer) {
+    if (role === 'superadmin') {
+      badgeContainer.className = 'role-badge superadmin';
+      badgeContainer.innerHTML = '👑 Super Admin';
+    } else {
+      badgeContainer.className = 'role-badge admin';
+      badgeContainer.innerHTML = '👤 Staf';
+    }
+  }
+}
+
 let allTickets = [];
 let filteredTickets = [];
 let availableRooms = [];
-let configuredGoogleSheetUrl = "";
 
 // Chart.js instances
 let chartTimeline = null;
@@ -39,6 +185,14 @@ const SBM_COLORS = [
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
+  fetch('/api/admin/check-auth', { headers: getAuthHeaders() })
+    .then(r => r.json())
+    .then(d => {
+      if (d.authenticated) {
+        updateRoleBadgeUI(d.role);
+      }
+    })
+    .catch(() => {});
   await loadRooms();
   await loadTickets();
 });
@@ -63,16 +217,8 @@ function setupEventListeners() {
   const filterStatus = document.getElementById('filterStatus');
   const tableSearch = document.getElementById('tableSearch');
   const btnResetFilter = document.getElementById('btnResetFilter');
-  const btnOpenGoogleSheet = document.getElementById('btnOpenGoogleSheet');
+  const btnExportExcel = document.getElementById('btnExportExcel');
   const btnExportPDF = document.getElementById('btnExportPDF');
-
-  // Google Sheet Modal Elements
-  const googleSheetModal = document.getElementById('googleSheetModal');
-  const btnModalGSheetClose = document.getElementById('btnModalGSheetClose');
-  const btnCopyFormula = document.getElementById('btnCopyFormula');
-  const importDataFormula = document.getElementById('importDataFormula');
-  const gsheetDirectBox = document.getElementById('gsheetDirectBox');
-  const linkGSheetTarget = document.getElementById('linkGSheetTarget');
 
   if (startDate) {
     startDate.addEventListener('change', () => {
@@ -91,77 +237,9 @@ function setupEventListeners() {
   if (filterStatus) filterStatus.addEventListener('change', applyFilters);
   if (tableSearch) tableSearch.addEventListener('input', applyFilters);
   if (btnResetFilter) btnResetFilter.addEventListener('click', resetFilters);
+  if (btnExportExcel) btnExportExcel.addEventListener('click', exportToExcel);
   if (btnExportPDF) btnExportPDF.addEventListener('click', exportToPDF);
-  if (btnOpenGoogleSheet) btnOpenGoogleSheet.addEventListener('click', () => window.handleOpenGoogleSheet());
-
-  if (googleSheetModal) {
-    googleSheetModal.addEventListener('click', (e) => {
-      if (e.target === googleSheetModal) {
-        window.closeGoogleSheetModal();
-      }
-    });
-  }
 }
-
-// Global Google Sheet Open Handler
-window.handleOpenGoogleSheet = function() {
-  const liveCsvUrl = window.location.origin + '/api/public/reports-csv';
-  const formulaText = `=IMPORTDATA("${liveCsvUrl}")`;
-  const importDataFormula = document.getElementById('importDataFormula');
-  const gsheetDirectBox = document.getElementById('gsheetDirectBox');
-  const linkGSheetTarget = document.getElementById('linkGSheetTarget');
-  const googleSheetModal = document.getElementById('googleSheetModal');
-
-  if (importDataFormula) importDataFormula.value = formulaText;
-
-  if (configuredGoogleSheetUrl && configuredGoogleSheetUrl.trim()) {
-    if (gsheetDirectBox) gsheetDirectBox.style.display = 'block';
-    if (linkGSheetTarget) linkGSheetTarget.href = configuredGoogleSheetUrl.trim();
-    // Directly open the saved Google Sheet
-    window.open(configuredGoogleSheetUrl.trim(), '_blank');
-    return;
-  } else {
-    if (gsheetDirectBox) gsheetDirectBox.style.display = 'none';
-  }
-
-  // Show guide modal if URL is not yet configured
-  if (googleSheetModal) googleSheetModal.style.display = 'flex';
-};
-
-window.closeGoogleSheetModal = function() {
-  const googleSheetModal = document.getElementById('googleSheetModal');
-  if (googleSheetModal) googleSheetModal.style.display = 'none';
-};
-
-window.copyFormula = function(inputId, btnId) {
-  const input = document.getElementById(inputId);
-  const btn = document.getElementById(btnId);
-  if (!input) return;
-
-  input.select();
-  input.setSelectionRange(0, 99999);
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(input.value).then(() => {
-      if (btn) {
-        btn.textContent = '✅ Disalin!';
-        setTimeout(() => { btn.textContent = '📋 Salin'; }, 2000);
-      }
-    }).catch(() => {
-      document.execCommand('copy');
-      if (btn) {
-        btn.textContent = '✅ Disalin!';
-        setTimeout(() => { btn.textContent = '📋 Salin'; }, 2000);
-      }
-    });
-  } else {
-    document.execCommand('copy');
-    if (btn) {
-      btn.textContent = '✅ Disalin!';
-      setTimeout(() => { btn.textContent = '📋 Salin'; }, 2000);
-    }
-  }
-};
 
 function clearActivePreset() {
   document.querySelectorAll('.btn-filter[data-period]').forEach(b => b.classList.remove('active'));
@@ -172,9 +250,6 @@ async function loadRooms() {
   try {
     const res = await fetch('/api/info');
     const data = await res.json();
-    if (data.googleSheetUrl) {
-      configuredGoogleSheetUrl = data.googleSheetUrl;
-    }
     if (data.rooms) {
       availableRooms = data.rooms;
       const roomSelect = document.getElementById('filterRoom');
@@ -186,13 +261,6 @@ async function loadRooms() {
   } catch (err) {
     console.error('Error loading rooms:', err);
   }
-}
-
-function getAuthHeaders() {
-  const token = localStorage.getItem('admin_token');
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['x-admin-token'] = token;
-  return headers;
 }
 
 // 3. Fetch Tickets
@@ -755,63 +823,221 @@ function updatePrintHeaderInfo() {
   if (genEl) genEl.textContent = `Dicetak pada: ${dateGenerated}`;
 }
 
-// 10. Export to Excel / CSV (UTF-8 BOM for Excel Windows Compatibility)
+// 10. Export to Genuine Excel (.xlsx / Job History Table) - Super Admin Protected
 function exportToExcel() {
-  if (filteredTickets.length === 0) {
-    alert('Tidak ada data tiket untuk diekspor.');
+  window.ensureSuperAdmin({
+    title: 'Otorisasi Ekspor Laporan Excel',
+    desc: 'Fitur ekspor rekapitulasi laporan ke format Excel (.xlsx) dilindungi. Masukkan kata sandi Super Admin untuk melanjutkan unduhan.',
+    onSuccess: () => {
+      proceedExportToExcel();
+    }
+  });
+}
+
+function proceedExportToExcel() {
+  if (!filteredTickets || filteredTickets.length === 0) {
+    alert('Tidak ada data tiket untuk diekspor ke Excel.');
     return;
   }
 
-  const headers = ['No', 'ID Tiket', 'Tanggal Panggil', 'Jam Panggil', 'Waktu Selesai', 'Durasi Penanganan', 'Ruangan', 'Kategori Kendala', 'Petugas Support', 'Status Tiket', 'Catatan Tambahan'];
-  
-  const rows = filteredTickets.map((t, idx) => {
+  const now = new Date();
+  const dateStamp = now.toISOString().slice(0, 10);
+  const timeStampFormatted = now.toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }) + ' pukul ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+
+  const startDateVal = document.getElementById('startDate')?.value;
+  const endDateVal = document.getElementById('endDate')?.value;
+  const periodText = (startDateVal || endDateVal)
+    ? `${startDateVal || 'Awal'} s/d ${endDateVal || 'Sekarang'}`
+    : 'Semua Data Riwayat Tercatat';
+
+  // Siapkan baris data riwayat pekerjaan
+  const dataRows = filteredTickets.map((t, idx) => {
     const d = new Date(t.createdAt);
     const dateStr = !isNaN(d) ? d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
-    const timeStr = !isNaN(d) ? d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
-    
+    const timeStr = !isNaN(d) ? d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : '-';
+
+    let claimedTimeStr = '-';
+    if (t.claimedAt) {
+      const claimD = new Date(t.claimedAt);
+      claimedTimeStr = !isNaN(claimD) ? claimD.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : '-';
+    }
+
     let compTimeStr = '-';
     let durationStr = '-';
     if (t.completedAt) {
       const compD = new Date(t.completedAt);
-      compTimeStr = !isNaN(compD) ? compD.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
+      compTimeStr = !isNaN(compD) ? compD.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : '-';
       durationStr = formatDuration(t.resolutionTimeSeconds);
+    } else if (t.status === 'Diproses') {
+      durationStr = 'Sedang dikerjakan';
+    } else if (t.status === 'Menunggu') {
+      durationStr = 'Menunggu penanganan';
     }
 
     return [
       idx + 1,
-      `"${t.id || ''}"`,
-      `"${dateStr}"`,
-      `"${timeStr}"`,
-      `"${compTimeStr}"`,
-      `"${durationStr}"`,
-      `"${(t.room || '').replace(/"/g, '""')}"`,
-      `"${(t.category || 'Umum').replace(/"/g, '""')}"`,
-      `"${(t.handledBy || '-').replace(/"/g, '""')}"`,
-      `"${t.status || ''}"`,
-      `"${(t.notes || '').replace(/"/g, '""')}"`
+      t.id ? '#' + t.id.slice(-6).toUpperCase() : '-',
+      dateStr,
+      timeStr,
+      t.room || '-',
+      t.category || 'Umum',
+      t.notes || '-',
+      t.handledBy || 'Tim Support',
+      claimedTimeStr,
+      compTimeStr,
+      durationStr,
+      t.status || 'Menunggu'
     ];
   });
 
-  const csvContent = '\uFEFF' + [
-    headers.join(','),
-    ...rows.map(r => r.join(','))
-  ].join('\r\n');
+  const columnHeaders = [
+    'No',
+    'ID Tiket',
+    'Tanggal Panggilan',
+    'Jam Panggilan',
+    'Lokasi Ruang Kelas',
+    'Kategori Kendala Teknis',
+    'Detail Catatan / Masalah',
+    'Petugas Support (Staf)',
+    'Waktu Mulai Diproses',
+    'Waktu Selesai Ditangani',
+    'Durasi Penanganan',
+    'Status Pekerjaan'
+  ];
 
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  // 1. Jika SheetJS (XLSX) tersedia, buat file .xlsx asli
+  if (typeof XLSX !== 'undefined') {
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // Buat struktur worksheet lengkap dengan header judul
+      const wsData = [
+        ['LAPORAN REKAPITULASI & RIWAYAT PEKERJAAN LAYANAN TEKNIS KELAS'],
+        ['SEKOLAH BISNIS DAN MANAJEMEN - INSTITUT TEKNOLOGI BANDUNG (KAMPUS JAKARTA)'],
+        [`Periode: ${periodText}`, '', `Waktu Ekspor: ${timeStampFormatted}`, '', `Total Tiket: ${filteredTickets.length}`],
+        [], // Baris kosong pemisah
+        columnHeaders,
+        ...dataRows
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+      // Tentukan lebar kolom otomatis agar rapi di Excel
+      const colWidths = [
+        { wch: 6 },  // No
+        { wch: 12 }, // ID Tiket
+        { wch: 18 }, // Tanggal Panggilan
+        { wch: 15 }, // Jam Panggilan
+        { wch: 22 }, // Lokasi Ruang
+        { wch: 28 }, // Kategori Kendala
+        { wch: 36 }, // Detail Catatan
+        { wch: 24 }, // Petugas Support
+        { wch: 20 }, // Waktu Diproses
+        { wch: 22 }, // Waktu Selesai
+        { wch: 20 }, // Durasi
+        { wch: 16 }  // Status
+      ];
+      ws['!cols'] = colWidths;
+
+      XLSX.utils.book_append_sheet(wb, ws, 'History Pekerjaan');
+      XLSX.writeFile(wb, `History_Pekerjaan_Layanan_Teknis_SBM_ITB_${dateStamp}.xlsx`);
+      return;
+    } catch (e) {
+      console.warn('SheetJS export fallback triggered:', e);
+    }
+  }
+
+  // 2. Fallback: Format Dokumen Excel (.xls HTML Spreadsheet dengan styling tabel penuh)
+  let excelHtml = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="utf-8">
+      <!--[if gte mso 9]>
+      <xml>
+        <x:ExcelWorkbook>
+          <x:ExcelWorksheets>
+            <x:ExcelWorksheet>
+              <x:Name>History Pekerjaan</x:Name>
+              <x:WorksheetOptions>
+                <x:DisplayGridlines/>
+              </x:WorksheetOptions>
+            </x:ExcelWorksheet>
+          </x:ExcelWorksheets>
+        </x:ExcelWorkbook>
+      </xml>
+      <![endif]-->
+      <style>
+        .title { font-size: 14pt; font-weight: bold; color: #0F2C59; text-align: left; }
+        .sub-title { font-size: 11pt; font-weight: bold; color: #334155; }
+        .meta { font-size: 9pt; color: #64748B; font-style: italic; }
+        th { background-color: #0F2C59; color: #FFFFFF; font-weight: bold; text-align: center; border: 1px solid #CBD5E1; padding: 8px; }
+        td { border: 1px solid #E2E8F0; padding: 6px 8px; font-size: 10pt; vertical-align: middle; }
+        .center { text-align: center; }
+        .status-selesai { background-color: #D1FAE5; color: #065F46; font-weight: bold; text-align: center; }
+        .status-diproses { background-color: #DBEAFE; color: #1E40AF; font-weight: bold; text-align: center; }
+        .status-menunggu { background-color: #FEF3C7; color: #92400E; font-weight: bold; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <table>
+        <tr><td colspan="12" class="title">LAPORAN REKAPITULASI & RIWAYAT PEKERJAAN LAYANAN TEKNIS KELAS</td></tr>
+        <tr><td colspan="12" class="sub-title">SEKOLAH BISNIS DAN MANAJEMEN - INSTITUT TEKNOLOGI BANDUNG (KAMPUS JAKARTA)</td></tr>
+        <tr><td colspan="12" class="meta">Periode: ${periodText} | Diunduh pada: ${timeStampFormatted} | Total: ${filteredTickets.length} Tiket</td></tr>
+        <tr><td colspan="12"></td></tr>
+        <thead>
+          <tr>
+            ${columnHeaders.map(h => `<th>${escapeHTML(h)}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${dataRows.map(row => `
+            <tr>
+              <td class="center">${row[0]}</td>
+              <td class="center"><b>${escapeHTML(row[1])}</b></td>
+              <td class="center">${escapeHTML(row[2])}</td>
+              <td class="center">${escapeHTML(row[3])}</td>
+              <td><b>${escapeHTML(row[4])}</b></td>
+              <td>${escapeHTML(row[5])}</td>
+              <td>${escapeHTML(row[6])}</td>
+              <td>${escapeHTML(row[7])}</td>
+              <td class="center">${escapeHTML(row[8])}</td>
+              <td class="center">${escapeHTML(row[9])}</td>
+              <td class="center">${escapeHTML(row[10])}</td>
+              <td class="status-${(row[11] || '').toLowerCase()}">${escapeHTML(row[11])}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  
-  const now = new Date();
-  const dateStamp = now.toISOString().slice(0, 10);
   link.setAttribute('href', url);
-  link.setAttribute('download', `Laporan_Layanan_Teknis_SBM_ITB_${dateStamp}.csv`);
+  link.setAttribute('download', `History_Pekerjaan_Layanan_Teknis_SBM_ITB_${dateStamp}.xls`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
 
-// 11. Export to PDF via Browser Print Dialog
+// 11. Export to PDF via Browser Print Dialog - Super Admin Protected
 function exportToPDF() {
-  updatePrintHeaderInfo();
-  window.print();
+  window.ensureSuperAdmin({
+    title: 'Otorisasi Cetak / Ekspor PDF',
+    desc: 'Fitur cetak dan ekspor laporan ke dokumen PDF dilindungi. Masukkan kata sandi Super Admin untuk melanjutkan pencetakan.',
+    onSuccess: () => {
+      updatePrintHeaderInfo();
+      window.print();
+    }
+  });
 }
+
+window.exportToExcel = exportToExcel;
+window.exportToPDF = exportToPDF;
+

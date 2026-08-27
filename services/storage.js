@@ -21,7 +21,6 @@ function sanitizeString(str) {
 }
 
 function readConfig() {
-  if (inMemoryConfig) return inMemoryConfig;
   try {
     const targetPath = isVercel && fs.existsSync(TMP_CONFIG_PATH) ? TMP_CONFIG_PATH : CONFIG_PATH;
     if (fs.existsSync(targetPath)) {
@@ -29,6 +28,7 @@ function readConfig() {
       inMemoryConfig = JSON.parse(data);
       return inMemoryConfig;
     }
+    if (inMemoryConfig) return inMemoryConfig;
     const defaultConfig = {
       appTitle: "Layanan Bantuan Teknis SBM ITB Jakarta",
       rooms: [
@@ -47,7 +47,8 @@ function readConfig() {
         countryCode: "62",
         webhookUrl: ""
       },
-      adminPassword: "admin"
+      adminPassword: "admin",
+      superAdminPassword: "Bismillah.1"
     };
     inMemoryConfig = defaultConfig;
     return defaultConfig;

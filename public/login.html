@@ -112,7 +112,7 @@
 
   <header class="navbar">
     <a href="/" class="nav-brand">
-      <span class="brand-badge">SBM ITB</span>
+      <img src="/images/logo-sbm-itb.png" alt="SBM ITB Logo" class="brand-logo-img">
       <div class="brand-text">
         <h1>Layanan Teknis Ruang Kelas</h1>
         <p>Kampus Jakarta</p>
@@ -123,16 +123,16 @@
   <main class="login-container">
     <div class="login-card">
       <div class="login-header">
-        <div class="logo-badge">🔐</div>
-        <h2>Portal Admin SBM ITB</h2>
-        <p>Masukkan kata sandi untuk mengakses dashboard</p>
+        <img src="/images/logo-sbm-itb.png" alt="SBM ITB Logo" style="height: 48px; object-fit: contain; margin-bottom: 12px;">
+        <h2 id="loginTitle">Portal Admin SBM ITB</h2>
+        <p id="loginSubtitle">Masukkan kata sandi untuk mengakses dashboard</p>
       </div>
 
       <div id="errorAlert" class="alert-error"></div>
 
       <form id="loginForm">
         <div class="form-group">
-          <label for="password">Kata Sandi Admin</label>
+          <label for="password" id="passwordLabel">Kata Sandi Admin</label>
           <input type="password" id="password" class="form-input" placeholder="Masukkan kata sandi..." required autofocus autocomplete="current-password">
         </div>
 
@@ -151,13 +151,27 @@
       const passwordInput = document.getElementById('password');
       const errorAlert = document.getElementById('errorAlert');
       const btnLogin = document.getElementById('btnLogin');
+      const loginTitle = document.getElementById('loginTitle');
+      const loginSubtitle = document.getElementById('loginSubtitle');
+      const passwordLabel = document.getElementById('passwordLabel');
+      const loginLogoBadge = document.getElementById('loginLogoBadge');
 
       const urlParams = new URLSearchParams(window.location.search);
+      const isSuperAdminRequested = urlParams.get('role') === 'superadmin';
       const redirectUrl = urlParams.get('redirect') || '/admin';
+
+      if (isSuperAdminRequested) {
+        loginLogoBadge.textContent = '👑';
+        loginTitle.textContent = 'Otorisasi Super Admin';
+        loginSubtitle.textContent = 'Halaman ini dilindungi dan memerlukan kata sandi Super Admin.';
+        passwordLabel.textContent = 'Kata Sandi Super Admin';
+        passwordInput.placeholder = 'Masukkan kata sandi super admin...';
+        btnLogin.textContent = 'Verifikasi Super Admin ➔';
+      }
 
       loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const password = passwordInput.value;
+        const password = passwordInput.value.trim();
         if (!password) return;
 
         btnLogin.disabled = true;
@@ -176,13 +190,25 @@
           if (data.success) {
             if (data.token) {
               localStorage.setItem('admin_token', data.token);
+              localStorage.setItem('admin_role', data.role || 'admin');
             }
+
+            if (isSuperAdminRequested && data.role !== 'superadmin') {
+              errorAlert.textContent = '⚠️ Akses ditolak: Anda masuk dengan hak akses Staf Monitoring, namun halaman tujuan membutuhkan kata sandi Super Admin.';
+              errorAlert.style.display = 'block';
+              btnLogin.disabled = false;
+              btnLogin.textContent = 'Verifikasi Super Admin ➔';
+              passwordInput.value = '';
+              passwordInput.focus();
+              return;
+            }
+
             window.location.href = decodeURIComponent(redirectUrl);
           } else {
             errorAlert.textContent = '❌ ' + (data.error || 'Kata sandi salah.');
             errorAlert.style.display = 'block';
             btnLogin.disabled = false;
-            btnLogin.textContent = 'Masuk ke Dashboard ➔';
+            btnLogin.textContent = isSuperAdminRequested ? 'Verifikasi Super Admin ➔' : 'Masuk ke Dashboard ➔';
             passwordInput.focus();
           }
         } catch (err) {
@@ -190,7 +216,7 @@
           errorAlert.textContent = '❌ Terjadi kesalahan jaringan. Silakan coba lagi.';
           errorAlert.style.display = 'block';
           btnLogin.disabled = false;
-          btnLogin.textContent = 'Masuk ke Dashboard ➔';
+          btnLogin.textContent = isSuperAdminRequested ? 'Verifikasi Super Admin ➔' : 'Masuk ke Dashboard ➔';
         }
       });
     });

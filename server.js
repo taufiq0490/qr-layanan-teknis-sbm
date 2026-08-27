@@ -77,9 +77,9 @@ function callRateLimiter(req, res, next) {
 // --- ADMIN AUTHENTICATION (Stateless Signed Tokens for Vercel Serverless & Local) ---
 const AUTH_SECRET = 'SBM_ITB_SESSION_SECRET_KEY_9921_JAKARTA';
 
-function generateAdminToken() {
+function generateAdminToken(role = 'admin') {
   const payload = {
-    role: 'admin',
+    role: role === 'superadmin' ? 'superadmin' : 'admin',
     exp: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
   };
   const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -87,26 +87,43 @@ function generateAdminToken() {
   return `${payloadStr}.${signature}`;
 }
 
-function verifyAdminToken(token) {
-  if (!token || typeof token !== 'string' || !token.includes('.')) return false;
+function getAdminSessionPayload(tokenOrReq) {
+  let token = null;
+  if (typeof tokenOrReq === 'string') {
+    token = tokenOrReq;
+  } else if (tokenOrReq && typeof tokenOrReq === 'object') {
+    const cookies = parseCookies(tokenOrReq);
+    token = tokenOrReq.headers['x-admin-token'] || 
+            tokenOrReq.headers['authorization']?.replace('Bearer ', '') || 
+            cookies.admin_session;
+  }
+
+  if (!token || typeof token !== 'string' || !token.includes('.')) return null;
   try {
     const [payloadStr, signature] = token.split('.');
     const expectedSig = crypto.createHmac('sha256', AUTH_SECRET).update(payloadStr).digest('base64url');
-    if (signature !== expectedSig) return false;
+    if (signature !== expectedSig) return null;
 
     const payload = JSON.parse(Buffer.from(payloadStr, 'base64url').toString('utf-8'));
-    if (!payload.exp || Date.now() > payload.exp) return false;
-    return true;
+    if (!payload.exp || Date.now() > payload.exp) return null;
+    return payload;
   } catch (e) {
-    return false;
+    return null;
   }
 }
 
+function verifyAdminToken(token) {
+  return getAdminSessionPayload(token) !== null;
+}
+
 function isValidAdminSession(req) {
-  const cookies = parseCookies(req);
-  const token = req.headers['x-admin-token'] || req.headers['authorization']?.replace('Bearer ', '') || cookies.admin_session;
-  if (!token) return false;
-  return verifyAdminToken(token);
+  const session = getAdminSessionPayload(req);
+  return session !== null;
+}
+
+function isValidSuperAdminSession(req) {
+  const session = getAdminSessionPayload(req);
+  return session !== null && session.role === 'superadmin';
 }
 
 function requireAdminAuthAPI(req, res, next) {
@@ -116,12 +133,42 @@ function requireAdminAuthAPI(req, res, next) {
   return res.status(401).json({ success: false, error: 'Akses ditolak. Sesi login admin telah berakhir atau tidak valid.' });
 }
 
+function requireSuperAdminAuthAPI(req, res, next) {
+  // Check if session is already superadmin
+  if (isValidSuperAdminSession(req)) {
+    return next();
+  }
+
+  // Also allow superadmin password in request body or header for on-demand verification
+  const config = readConfig();
+  const validSuperPass = process.env.SUPER_ADMIN_PASSWORD || config.superAdminPassword || config.adminPassword || 'Bismillah.1';
+  const providedPass = req.headers['x-super-admin-password'] || req.body?.superAdminPassword;
+  
+  if (providedPass && providedPass === validSuperPass) {
+    return next();
+  }
+
+  return res.status(403).json({ 
+    success: false, 
+    error: 'Akses ditolak. Tindakan ini memerlukan otorisasi Password Super Admin.',
+    requiresSuperAdmin: true 
+  });
+}
+
 function requireAdminAuthPage(req, res, next) {
   if (isValidAdminSession(req)) {
     return next();
   }
   const redirectUrl = encodeURIComponent(req.originalUrl || '/admin');
   return res.redirect(`/login?redirect=${redirectUrl}`);
+}
+
+function requireSuperAdminAuthPage(req, res, next) {
+  if (isValidSuperAdminSession(req)) {
+    return next();
+  }
+  const redirectUrl = encodeURIComponent(req.originalUrl || '/admin');
+  return res.redirect(`/login?role=superadmin&redirect=${redirectUrl}`);
 }
 
 // Helper to mask sensitive token
@@ -166,21 +213,69 @@ let publicTunnelUrl = null;
 
 // --- AUTH API ROUTES ---
 
-// Admin Login
+// Admin Login (Supports both Super Admin and Staff Admin passwords)
 app.post('/api/admin/login', (req, res) => {
   const { password } = req.body;
+  if (!password || !password.trim()) {
+    return res.status(400).json({ success: false, error: 'Kata sandi wajib diisi.' });
+  }
+
+  const cleanPassword = password.trim();
   const config = readConfig();
-  const validPassword = process.env.ADMIN_PASSWORD || config.adminPassword || 'admin';
+  const validSuperPassword = (process.env.SUPER_ADMIN_PASSWORD || config.superAdminPassword || 'Bismillah.1').trim();
+  const validAdminPassword = (process.env.ADMIN_PASSWORD || config.adminPassword || 'admin').trim();
 
-  if (password === validPassword) {
-    const token = generateAdminToken();
-
-    // Set cookie for browser navigation
+  if (cleanPassword === validSuperPassword) {
+    const token = generateAdminToken('superadmin');
     res.setHeader('Set-Cookie', `admin_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
-    return res.json({ success: true, message: 'Login berhasil!', token });
+    return res.json({ 
+      success: true, 
+      message: 'Login Super Admin berhasil!', 
+      token, 
+      role: 'superadmin',
+      isSuperAdmin: true 
+    });
+  }
+
+  if (cleanPassword === validAdminPassword) {
+    const token = generateAdminToken('admin');
+    res.setHeader('Set-Cookie', `admin_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
+    return res.json({ 
+      success: true, 
+      message: 'Login Staf Admin berhasil!', 
+      token, 
+      role: 'admin',
+      isSuperAdmin: false 
+    });
   }
 
   return res.status(401).json({ success: false, error: 'Kata sandi salah.' });
+});
+
+// Verify Super Admin Password (for modal unlocks & session promotion)
+app.post('/api/admin/verify-superadmin', (req, res) => {
+  const { password } = req.body;
+  if (!password || !password.trim()) {
+    return res.status(400).json({ success: false, error: 'Kata sandi Super Admin wajib diisi.' });
+  }
+
+  const cleanPassword = password.trim();
+  const config = readConfig();
+  const validSuperPassword = (process.env.SUPER_ADMIN_PASSWORD || config.superAdminPassword || config.adminPassword || 'Bismillah.1').trim();
+
+  if (cleanPassword === validSuperPassword) {
+    const token = generateAdminToken('superadmin');
+    res.setHeader('Set-Cookie', `admin_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
+    return res.json({ 
+      success: true, 
+      message: 'Otorisasi Super Admin berhasil!', 
+      token, 
+      role: 'superadmin',
+      isSuperAdmin: true 
+    });
+  }
+
+  return res.status(401).json({ success: false, error: 'Kata sandi Super Admin salah.' });
 });
 
 // Admin Logout
@@ -189,10 +284,13 @@ app.post('/api/admin/logout', (req, res) => {
   res.json({ success: true, message: 'Berhasil logout.' });
 });
 
-// Check Admin Auth Status
+// Check Admin Auth Status & Role
 app.get('/api/admin/check-auth', (req, res) => {
-  const authenticated = isValidAdminSession(req);
-  res.json({ success: true, authenticated });
+  const session = getAdminSessionPayload(req);
+  const authenticated = session !== null;
+  const isSuperAdmin = session !== null && session.role === 'superadmin';
+  const role = session ? session.role : 'guest';
+  res.json({ success: true, authenticated, isSuperAdmin, role });
 });
 
 // 1. Get Public App Info & Rooms
@@ -566,8 +664,8 @@ app.patch('/api/tickets/:id/status', requireAdminAuthAPI, async (req, res) => {
   res.json({ success: true, ticket: updatedTicket });
 });
 
-// 5.1 Clear all tickets (Admin - Protected)
-app.post('/api/admin/clear-tickets', requireAdminAuthAPI, (req, res) => {
+// 5.1 Clear all tickets (Super Admin - Protected)
+app.post('/api/admin/clear-tickets', requireSuperAdminAuthAPI, (req, res) => {
   try {
     clearAllTickets();
     res.json({ success: true, message: 'Seluruh riwayat tiket berhasil dikosongkan.' });
@@ -577,8 +675,8 @@ app.post('/api/admin/clear-tickets', requireAdminAuthAPI, (req, res) => {
   }
 });
 
-// 6. Get Settings (Admin - Protected with MASKED TOKEN)
-app.get('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
+// 6. Get Settings (Super Admin - Protected with MASKED TOKEN)
+app.get('/api/admin/settings', requireSuperAdminAuthAPI, (req, res) => {
   const config = readConfig();
   const rawToken = (config.waGateway && config.waGateway.fonnteToken) || '';
   const rawTeleToken = (config.telegramGateway && config.telegramGateway.botToken) || '';
@@ -612,15 +710,53 @@ app.get('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
         longitude: config.geofencing?.longitude ?? 106.83228,
         maxRadiusMeters: config.geofencing?.maxRadiusMeters ?? 250
       },
-      googleSheetUrl: config.googleSheetUrl || ""
+      googleSheetUrl: config.googleSheetUrl || "",
+      hasAdminPassword: Boolean(config.adminPassword),
+      hasSuperAdminPassword: Boolean(config.superAdminPassword)
     }
   });
 });
 
-// 7. Save Settings (Admin - Protected with SAFE TOKEN PRESERVATION)
-app.post('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
-  const { appTitle, rooms, messageTemplate, claimBaseUrl, notificationChannel, waGateway, telegramGateway, adminPassword, geofencing, googleSheetUrl } = req.body;
+// 7. Save Settings (Super Admin - Protected with SAFE TOKEN PRESERVATION & OLD PASSWORD VERIFICATION)
+app.post('/api/admin/settings', requireSuperAdminAuthAPI, (req, res) => {
+  const { 
+    appTitle, 
+    rooms, 
+    messageTemplate, 
+    claimBaseUrl, 
+    notificationChannel, 
+    waGateway, 
+    telegramGateway, 
+    currentSuperAdminPassword,
+    adminPassword, 
+    superAdminPassword, 
+    geofencing, 
+    googleSheetUrl 
+  } = req.body;
   const currentConfig = readConfig();
+
+  const isChangingSuperPass = typeof superAdminPassword === 'string' && superAdminPassword.trim() !== '';
+  const isChangingStaffPass = typeof adminPassword === 'string' && adminPassword.trim() !== '';
+
+  // Enforce Old / Current Super Admin Password Verification before allowing password change
+  if (isChangingSuperPass || isChangingStaffPass) {
+    const validCurrentSuperPass = (process.env.SUPER_ADMIN_PASSWORD || currentConfig.superAdminPassword || currentConfig.adminPassword || 'Bismillah.1').trim();
+    const providedOldPass = (currentSuperAdminPassword || '').trim();
+
+    if (!providedOldPass) {
+      return res.status(400).json({
+        success: false,
+        error: 'Kata sandi lama (Super Admin saat ini) wajib diisi untuk mengubah kata sandi.'
+      });
+    }
+
+    if (providedOldPass !== validCurrentSuperPass) {
+      return res.status(400).json({
+        success: false,
+        error: 'Kata sandi lama (Super Admin saat ini) yang Anda masukkan salah. Perubahan kata sandi ditolak.'
+      });
+    }
+  }
 
   // If WA token is masked or not provided, preserve existing token
   let tokenToSave = currentConfig.waGateway?.fonnteToken || '';
@@ -648,7 +784,8 @@ app.post('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
     claimBaseUrl: claimBaseUrl ? sanitizeString(claimBaseUrl) : (currentConfig.claimBaseUrl || "https://qr-layanan-teknis-sbm.vercel.app"),
     googleSheetUrl: typeof googleSheetUrl === 'string' ? googleSheetUrl.trim() : (currentConfig.googleSheetUrl || ""),
     notificationChannel: notificationChannel || currentConfig.notificationChannel || 'both',
-    adminPassword: adminPassword && adminPassword.trim() ? adminPassword.trim() : currentConfig.adminPassword,
+    adminPassword: isChangingStaffPass ? adminPassword.trim() : (currentConfig.adminPassword || 'admin'),
+    superAdminPassword: isChangingSuperPass ? superAdminPassword.trim() : (currentConfig.superAdminPassword || 'Bismillah.1'),
     waGateway: {
       ...currentConfig.waGateway,
       provider: waGateway?.provider || currentConfig.waGateway?.provider || 'fonnte',
@@ -673,14 +810,23 @@ app.post('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
 
   const saved = saveConfig(newConfig);
   if (saved) {
-    res.json({ success: true, message: 'Pengaturan berhasil disimpan!' });
+    let newToken = null;
+    if (isChangingSuperPass) {
+      newToken = generateAdminToken('superadmin');
+      res.setHeader('Set-Cookie', `admin_session=${newToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
+    }
+    res.json({ 
+      success: true, 
+      message: 'Pengaturan berhasil disimpan!',
+      newToken: newToken || undefined 
+    });
   } else {
     res.status(500).json({ success: false, error: 'Gagal menyimpan konfigurasi.' });
   }
 });
 
-// 7.1 Fetch WhatsApp Groups from Fonnte (Admin - Protected)
-app.get('/api/admin/wa-groups', requireAdminAuthAPI, async (req, res) => {
+// 7.1 Fetch WhatsApp Groups from Fonnte (Super Admin - Protected)
+app.get('/api/admin/wa-groups', requireSuperAdminAuthAPI, async (req, res) => {
   try {
     const config = readConfig();
     const fonnteToken = config.waGateway?.fonnteToken;
@@ -694,8 +840,8 @@ app.get('/api/admin/wa-groups', requireAdminAuthAPI, async (req, res) => {
   }
 });
 
-// 8. Test WhatsApp Gateway (Admin - Protected)
-app.post('/api/admin/test-wa', requireAdminAuthAPI, async (req, res) => {
+// 8. Test WhatsApp Gateway (Super Admin - Protected)
+app.post('/api/admin/test-wa', requireSuperAdminAuthAPI, async (req, res) => {
   try {
     const testTicket = createTicket(
       "Ruang Simulasi/Test",
@@ -727,8 +873,8 @@ app.post('/api/admin/test-wa', requireAdminAuthAPI, async (req, res) => {
   }
 });
 
-// 8.1 Test Telegram Gateway (Admin - Protected)
-app.post('/api/admin/test-telegram', requireAdminAuthAPI, async (req, res) => {
+// 8.1 Test Telegram Gateway (Super Admin - Protected)
+app.post('/api/admin/test-telegram', requireSuperAdminAuthAPI, async (req, res) => {
   try {
     const testTicket = createTicket(
       "Ruang Simulasi/Test",
@@ -775,10 +921,10 @@ app.get('/call', (req, res) => {
 app.get('/admin', requireAdminAuthPage, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
-app.get('/admin/print-qr', requireAdminAuthPage, (req, res) => {
+app.get('/admin/print-qr', requireSuperAdminAuthPage, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'print-qr.html'));
 });
-app.get('/admin/settings', requireAdminAuthPage, (req, res) => {
+app.get('/admin/settings', requireSuperAdminAuthPage, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'settings.html'));
 });
 app.get(['/admin/reports', '/reports'], requireAdminAuthPage, (req, res) => {

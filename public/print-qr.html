@@ -183,21 +183,26 @@
 
   <!-- Navbar -->
   <header class="navbar no-print">
-    <div class="nav-brand">
-      <span class="brand-badge">SBM ITB</span>
+    <a href="/admin" class="nav-brand">
+      <img src="/images/logo-sbm-itb.png" alt="SBM ITB Logo" class="brand-logo-img">
       <div class="brand-text">
-        <h1>Pusat Cetak QR Code</h1>
+        <h1>Layanan Teknis Kelas</h1>
         <p>Kampus Jakarta</p>
       </div>
+    </a>
+    <div class="nav-right-wrap">
+      <nav class="nav-links">
+        <a href="/" class="nav-link">🏠 Portal Ruangan</a>
+        <a href="/admin" class="nav-link">📊 Dashboard</a>
+        <a href="/admin/reports" class="nav-link">📈 Laporan & Grafik</a>
+        <a href="/admin/print-qr" class="nav-link active">🖨️ Cetak QR</a>
+        <a href="/admin/settings" class="nav-link">⚙️ Pengaturan</a>
+      </nav>
+      <div class="nav-user-section">
+        <span id="userRoleBadge" class="role-badge superadmin">👑 Super Admin</span>
+        <a href="javascript:void(0)" onclick="handleLogout()" class="btn-nav-logout" title="Keluar sesi">🚪 Logout</a>
+      </div>
     </div>
-    <nav class="nav-links">
-      <a href="/" class="nav-link">🏠 Portal Ruangan</a>
-      <a href="/admin/print-qr" class="nav-link active">🖨️ Cetak Kartu QR</a>
-      <a href="/admin" class="nav-link">📊 Dashboard</a>
-      <a href="/admin/reports" class="nav-link">📈 Laporan & Grafik</a>
-      <a href="/admin/settings" class="nav-link">⚙️ Pengaturan WA</a>
-      <a href="javascript:void(0)" onclick="handleLogout()" class="nav-link" style="color: #FCA5A5;">🚪 Logout</a>
-    </nav>
   </header>
 
   <main class="container">

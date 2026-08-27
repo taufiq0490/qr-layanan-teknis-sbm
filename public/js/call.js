@@ -243,6 +243,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (data.success && data.ticket) {
         activeTicketId = data.ticket.id;
+        lastTrackedStatus = data.ticket.status;
+        if (window.SoundNotifier) {
+          window.SoundNotifier.playCallSentSound();
+        }
         updateQuotaDisplay();
         closeModal();
         showTrackingView(data.ticket);
@@ -259,10 +263,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  let lastTrackedStatus = null;
+
   function showTrackingView(ticket) {
     callCard.style.display = 'none';
     trackingBox.style.display = 'block';
     trackingTicketId.textContent = '#' + ticket.id.slice(-6);
+    lastTrackedStatus = ticket.status;
 
     updateTrackingUI(ticket);
 
@@ -278,6 +285,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch(`/api/tickets/${encodeURIComponent(activeTicketId)}`);
       const data = await res.json();
       if (data.success && data.ticket) {
+        const prevStatus = lastTrackedStatus;
+        const newStatus = data.ticket.status;
+
+        // Trigger sound on status change
+        if (prevStatus && prevStatus !== newStatus && window.SoundNotifier) {
+          if (newStatus === 'Diproses') {
+            window.SoundNotifier.playStaffDispatchedSound();
+          } else if (newStatus === 'Selesai') {
+            window.SoundNotifier.playCompletedSound();
+          }
+        }
+        lastTrackedStatus = newStatus;
+
         updateTrackingUI(data.ticket);
         if (data.ticket.status === 'Selesai' && pollInterval) {
           // Slow down polling once finished
@@ -355,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
   btnCallAgain.addEventListener('click', () => {
     if (pollInterval) clearInterval(pollInterval);
     activeTicketId = null;
+    lastTrackedStatus = null;
     trackingBox.style.display = 'none';
     callCard.style.display = 'block';
     if (inputOptionalNotes) inputOptionalNotes.value = '';

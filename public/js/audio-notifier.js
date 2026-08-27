@@ -1,0 +1,496 @@
+/**
+ * Audio Notifier Engine - SBM ITB Layanan Teknis
+ * Menggunakan Web Audio API native (100% andal tanpa file eksternal)
+ */
+
+class SoundNotifierEngine {
+  constructor() {
+    this.audioCtx = null;
+    this.soundType = localStorage.getItem('sbm_sound_type') || 'dingdong';
+    this.volume = parseFloat(localStorage.getItem('sbm_sound_volume') || '0.8');
+    this.isMuted = localStorage.getItem('sbm_sound_muted') === 'true';
+    this.loopEnabled = localStorage.getItem('sbm_sound_loop') === 'true';
+    this.loopIntervalId = null;
+    this.isLooping = false;
+    this.isAudioUnlocked = false;
+
+    // Desktop notification tracking
+    this.originalTitle = document.title;
+    this.titleBlinkInterval = null;
+
+    // Setup auto-unlock on first user interaction
+    this.initAutoUnlock();
+  }
+
+  // Inisialisasi AudioContext dengan aman
+  getAudioContext() {
+    if (!this.audioCtx) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        this.audioCtx = new AudioContextClass();
+      }
+    }
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      this.audioCtx.resume();
+    }
+    return this.audioCtx;
+  }
+
+  // Listener untuk membuka kunci browser autoplay policy
+  initAutoUnlock() {
+    const unlock = () => {
+      const ctx = this.getAudioContext();
+      if (ctx && ctx.state === 'running') {
+        this.isAudioUnlocked = true;
+        this.updateUnlockBannerUI(false);
+      }
+    };
+
+    ['click', 'touchstart', 'keydown'].forEach(evt => {
+      document.addEventListener(evt, unlock, { passive: true, once: false });
+    });
+  }
+
+  // Helper untuk membuat Master Gain dengan kontrol volume
+  createMasterGain(ctx) {
+    const masterGain = ctx.createGain();
+    const effectiveVolume = this.isMuted ? 0 : this.volume;
+    masterGain.gain.setValueAtTime(effectiveVolume, ctx.currentTime);
+    masterGain.connect(ctx.destination);
+    return masterGain;
+  }
+
+  /* ==========================================================
+     SYNTHESIZER NADA NOTIFIKASI
+     ========================================================== */
+
+  // 1. Ding Dong Ruang Kelas (G5 -> E5 chime dengan resonansi bel merdu)
+  playDingDong(ctx, masterGain) {
+    const now = ctx.currentTime;
+
+    // Nada Pertama: G5 (783.99 Hz)
+    const osc1 = ctx.createOscillator();
+    const osc1Harmonic = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(783.99, now);
+    osc1Harmonic.type = 'triangle';
+    osc1Harmonic.frequency.setValueAtTime(783.99 * 2, now); // Overtone
+
+    gain1.gain.setValueAtTime(0.7, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+
+    osc1.connect(gain1);
+    osc1Harmonic.connect(gain1);
+    gain1.connect(masterGain);
+
+    osc1.start(now);
+    osc1Harmonic.start(now);
+    osc1.stop(now + 0.9);
+    osc1Harmonic.stop(now + 0.9);
+
+    // Nada Kedua: E5 (659.25 Hz) berdentang setelah 0.35 detik
+    const osc2 = ctx.createOscillator();
+    const osc2Harmonic = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+
+    const t2 = now + 0.35;
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(659.25, t2);
+    osc2Harmonic.type = 'triangle';
+    osc2Harmonic.frequency.setValueAtTime(659.25 * 2, t2);
+
+    gain2.gain.setValueAtTime(0, now);
+    gain2.gain.setValueAtTime(0.8, t2);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t2 + 1.4);
+
+    osc2.connect(gain2);
+    osc2Harmonic.connect(gain2);
+    gain2.connect(masterGain);
+
+    osc2.start(t2);
+    osc2Harmonic.start(t2);
+    osc2.stop(t2 + 1.4);
+    osc2Harmonic.stop(t2 + 1.4);
+  }
+
+  // 2. Sirene Tanggap Cepat / Emergency (Alternating Dual Pitch 3x Pulse)
+  playEmergencySiren(ctx, masterGain) {
+    const now = ctx.currentTime;
+    const tones = [
+      { freq: 880, start: 0.0, dur: 0.18 },
+      { freq: 659, start: 0.18, dur: 0.18 },
+      { freq: 880, start: 0.36, dur: 0.18 },
+      { freq: 659, start: 0.54, dur: 0.18 },
+      { freq: 988, start: 0.72, dur: 0.35 }
+    ];
+
+    tones.forEach(t => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(t.freq, now + t.start);
+
+      // Low pass filter untuk menghaluskan nada sawtooth agar tidak menusuk telinga
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2200, now + t.start);
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.setValueAtTime(0.45, now + t.start);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + t.start + t.dur);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(now + t.start);
+      osc.stop(now + t.start + t.dur);
+    });
+  }
+
+  // 3. Melodi Marimba Modern (C5 -> E5 -> G5 -> C6)
+  playMarimba(ctx, masterGain) {
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 523.25, time: 0.00 }, // C5
+      { freq: 659.25, time: 0.12 }, // E5
+      { freq: 783.99, time: 0.24 }, // G5
+      { freq: 1046.50, time: 0.36 } // C6
+    ];
+
+    notes.forEach((n, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const t = now + n.time;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(n.freq, t);
+
+      // Tambahkan vibrato / warm resonance
+      const decay = idx === notes.length - 1 ? 0.9 : 0.4;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.setValueAtTime(0.6, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + decay);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(t);
+      osc.stop(t + decay);
+    });
+  }
+
+  // 4. Bel Elektronik / Digital Intercom (Dua nada tinggi jernih)
+  playElectronic(ctx, masterGain) {
+    const now = ctx.currentTime;
+    const beeps = [
+      { freq: 1046.5, start: 0.0, dur: 0.15 },
+      { freq: 1318.5, start: 0.15, dur: 0.35 }
+    ];
+
+    beeps.forEach(b => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const t = now + b.start;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(b.freq, t);
+
+      gain.gain.setValueAtTime(0.55, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + b.dur);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(t);
+      osc.stop(t + b.dur);
+    });
+  }
+
+  // 5. Radar Ping / Akustik Perhatian
+  playRadar(ctx, masterGain) {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, now); // D5
+    osc.frequency.exponentialRampToValueAtTime(1174.66, now + 0.1); // Sweep ke D6
+
+    gain.gain.setValueAtTime(0.65, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+    osc.connect(gain);
+    gain.connect(masterGain);
+
+    osc.start(now);
+    osc.stop(now + 1.2);
+  }
+
+  /* ==========================================================
+     NADA TAMBAHAN UNTUK CALLER & PROSES TIKET
+     ========================================================== */
+
+  // Nada Konfirmasi Panggilan Terkirim (Ruang Pemanggil)
+  playCallSentSound() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const master = this.createMasterGain(ctx);
+      const now = ctx.currentTime;
+
+      [523.25, 659.25, 783.99].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const t = now + (i * 0.1);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.4, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+        osc.connect(gain);
+        gain.connect(master);
+        osc.start(t);
+        osc.stop(t + 0.35);
+      });
+    } catch (e) {
+      console.warn('Audio play error:', e);
+    }
+  }
+
+  // Nada Notifikasi Staf Meluncur / Diproses
+  playStaffDispatchedSound() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const master = this.createMasterGain(ctx);
+      const now = ctx.currentTime;
+
+      [659.25, 880].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const t = now + (i * 0.16);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.5, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+        osc.connect(gain);
+        gain.connect(master);
+        osc.start(t);
+        osc.stop(t + 0.6);
+      });
+    } catch (e) {
+      console.warn('Audio play error:', e);
+    }
+  }
+
+  // Nada Selesai Ditangani
+  playCompletedSound() {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const master = this.createMasterGain(ctx);
+      const now = ctx.currentTime;
+
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const t = now + (i * 0.12);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.4, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+        osc.connect(gain);
+        gain.connect(master);
+        osc.start(t);
+        osc.stop(t + 0.5);
+      });
+    } catch (e) {
+      console.warn('Audio play error:', e);
+    }
+  }
+
+  /* ==========================================================
+     TRIGGER PANGGILAN MASUK (ADMIN & DASHBOARD)
+     ========================================================== */
+
+  // Memutar nada terpilih saat ada tiket baru
+  playIncomingCallSound(customType = null) {
+    if (this.isMuted) return;
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+
+      if (ctx.state === 'suspended') {
+        this.updateUnlockBannerUI(true);
+        ctx.resume();
+      }
+
+      const master = this.createMasterGain(ctx);
+      const type = customType || this.soundType;
+
+      switch (type) {
+        case 'emergency':
+          this.playEmergencySiren(ctx, master);
+          break;
+        case 'marimba':
+          this.playMarimba(ctx, master);
+          break;
+        case 'electronic':
+          this.playElectronic(ctx, master);
+          break;
+        case 'radar':
+          this.playRadar(ctx, master);
+          break;
+        case 'dingdong':
+        default:
+          this.playDingDong(ctx, master);
+          break;
+      }
+    } catch (e) {
+      console.warn('Gagal memutar audio notifikasi:', e);
+    }
+  }
+
+  // Mulai Alarm Berulang (Jika loopEnabled aktif dan ada panggilan belum ditangani)
+  startContinuousAlert(ticketCount = 1) {
+    if (!this.loopEnabled || this.isMuted) return;
+    if (this.isLooping) return;
+
+    this.isLooping = true;
+    this.playIncomingCallSound();
+
+    this.loopIntervalId = setInterval(() => {
+      if (this.isLooping && !this.isMuted) {
+        this.playIncomingCallSound();
+      }
+    }, 4500); // Putar setiap 4.5 detik
+  }
+
+  // Hentikan Alarm Berulang
+  stopContinuousAlert() {
+    this.isLooping = false;
+    if (this.loopIntervalId) {
+      clearInterval(this.loopIntervalId);
+      this.loopIntervalId = null;
+    }
+    this.stopTitleBlink();
+  }
+
+  /* ==========================================================
+     NOTIFIKASI DESKTOP & JUDUL TAB BERKEDIP
+     ========================================================== */
+
+  // Minta Izin Notifikasi Desktop
+  async requestNotificationPermission() {
+    if (!('Notification' in window)) {
+      alert('Browser Anda tidak mendukung Web Desktop Notification.');
+      return false;
+    }
+    if (Notification.permission === 'granted') {
+      return true;
+    }
+    const perm = await Notification.requestPermission();
+    return perm === 'granted';
+  }
+
+  // Tampilkan Notifikasi Desktop Browser
+  showDesktopNotification(title, body) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        const notif = new Notification(title, {
+          body: body,
+          icon: '/favicon.ico',
+          tag: 'sbm-ticket-alert',
+          requireInteraction: true
+        });
+        notif.onclick = () => {
+          window.focus();
+          notif.close();
+        };
+      } catch (e) {
+        console.warn('Desktop notification error:', e);
+      }
+    }
+  }
+
+  // Berkedip di judul Tab browser untuk menarik perhatian saat buka tab lain
+  startTitleBlink(message = '🚨 PANGGILAN BARU MASUK!') {
+    if (this.titleBlinkInterval) clearInterval(this.titleBlinkInterval);
+    let isOriginal = false;
+    this.titleBlinkInterval = setInterval(() => {
+      document.title = isOriginal ? this.originalTitle : message;
+      isOriginal = !isOriginal;
+    }, 900);
+
+    const onFocus = () => {
+      this.stopTitleBlink();
+      window.removeEventListener('focus', onFocus);
+    };
+    window.addEventListener('focus', onFocus);
+  }
+
+  stopTitleBlink() {
+    if (this.titleBlinkInterval) {
+      clearInterval(this.titleBlinkInterval);
+      this.titleBlinkInterval = null;
+    }
+    document.title = this.originalTitle;
+  }
+
+  /* ==========================================================
+     PENGATURAN PREFERENSI
+     ========================================================== */
+
+  setSoundType(type) {
+    this.soundType = type;
+    localStorage.setItem('sbm_sound_type', type);
+  }
+
+  setVolume(vol) {
+    this.volume = Math.max(0, Math.min(1, parseFloat(vol)));
+    localStorage.setItem('sbm_sound_volume', this.volume.toString());
+  }
+
+  setMuted(muted) {
+    this.isMuted = !!muted;
+    localStorage.setItem('sbm_sound_muted', this.isMuted.toString());
+    if (this.isMuted) {
+      this.stopContinuousAlert();
+    }
+  }
+
+  setLoopEnabled(enabled) {
+    this.loopEnabled = !!enabled;
+    localStorage.setItem('sbm_sound_loop', this.loopEnabled.toString());
+    if (!this.loopEnabled) {
+      this.stopContinuousAlert();
+    }
+  }
+
+  testSound(type = null) {
+    const ctx = this.getAudioContext();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().then(() => {
+        this.playIncomingCallSound(type || this.soundType);
+      });
+    } else {
+      this.playIncomingCallSound(type || this.soundType);
+    }
+  }
+
+  // Banner UI helper jika autoplay ditolak browser
+  updateUnlockBannerUI(show) {
+    const banner = document.getElementById('audioUnlockBanner');
+    if (banner) {
+      banner.style.display = show ? 'flex' : 'none';
+    }
+  }
+}
+
+// Export singleton instance global
+window.SoundNotifier = new SoundNotifierEngine();

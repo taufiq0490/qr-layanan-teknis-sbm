@@ -7,30 +7,50 @@
   <link rel="stylesheet" href="/css/style.css">
   <style>
     .wifi-alert-banner {
-      background: #EFF6FF;
-      border: 1.5px solid #93C5FD;
-      border-radius: 12px;
-      padding: 12px 16px;
+      background: linear-gradient(135deg, #F0F9FF 0%, #FFFFFF 100%);
+      border: 1.5px solid #BAE6FD;
+      border-radius: 14px;
+      padding: 16px 20px;
       margin-bottom: 16px;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.08);
+      text-align: center;
+    }
+    .wifi-alert-title {
+      font-weight: 800;
+      font-size: 0.9rem;
+      color: #0369A1;
+      margin-bottom: 6px;
+      letter-spacing: 0.4px;
+      text-align: center;
+    }
+    .wifi-alert-desc {
+      font-size: 0.84rem;
+      color: #334155;
+      line-height: 1.5;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .wifi-chips-row {
       display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      font-size: 0.85rem;
-      color: #1E3A8A;
-      box-shadow: 0 2px 8px rgba(30, 58, 138, 0.06);
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: #64748B;
+      text-align: center;
     }
-    .wifi-alert-banner .wifi-icon {
-      font-size: 1.4rem;
-      line-height: 1;
-    }
-    .wifi-alert-banner .wifi-highlight {
-      display: inline-block;
-      background: #DBEAFE;
-      color: #1E40AF;
+    .wifi-badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      color: #1D4ED8;
       font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-top: 2px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 0.78rem;
     }
     .rate-limit-badge {
       display: inline-flex;
@@ -146,20 +166,28 @@
     }
     .modal-wifi-warning {
       background: #FFFBEB;
-      border: 1.5px solid #F59E0B;
+      border: 1px solid #FCD34D;
       border-radius: 10px;
       padding: 10px 14px;
       margin-bottom: 16px;
       display: flex;
+      align-items: flex-start;
       gap: 10px;
       font-size: 0.8rem;
       color: #92400E;
-      line-height: 1.35;
+      line-height: 1.4;
     }
     .modal-wifi-warning .warning-icon {
-      font-size: 1.25rem;
-      line-height: 1;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: #FEF3C7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
       flex-shrink: 0;
+      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.25);
     }
     .modal-options-list {
       display: flex;
@@ -376,7 +404,7 @@
   <!-- Top Navigation Header -->
   <header class="navbar">
     <div class="nav-brand">
-      <span class="brand-badge">SBM ITB</span>
+      <img src="/images/logo-sbm-itb.png" alt="SBM ITB Logo" class="brand-logo-img">
       <div class="brand-text">
         <h1>Layanan Teknis Kelas</h1>
         <p>Kampus Jakarta</p>
@@ -386,15 +414,15 @@
 
   <main class="container-sm" style="margin-top: 15px;">
     
-    <!-- Campus Location & Wi-Fi Advisory Banner -->
+    <!-- Campus Location & Wi-Fi Advisory Banner (Centered, No Pin) -->
     <div class="wifi-alert-banner" id="wifiBanner">
-      <div class="wifi-icon">📍</div>
-      <div>
-        <div style="font-weight: 800; font-size: 0.9rem; margin-bottom: 2px;">KETENTUAN LOKASI & JARINGAN KAMPUS</div>
-        <div>Panggilan bantuan teknis hanya dapat dilakukan saat Anda <strong>berada di sekitar lingkungan kampus SBM ITB Jakarta</strong>.</div>
-        <div style="margin-top: 4px; font-size: 0.82rem;">
-          Disarankan terhubung ke Wi-Fi resmi: <span class="wifi-highlight">📶 ITB Hot Spot</span> atau <span class="wifi-highlight">📶 ITB Guest</span>
-        </div>
+      <div class="wifi-alert-title">KETENTUAN LOKASI & JARINGAN KAMPUS</div>
+      <div class="wifi-alert-desc">
+        Panggilan bantuan teknis hanya dapat dilakukan saat Anda <strong>berada di sekitar lingkungan kampus SBM ITB Jakarta</strong>.
+      </div>
+      <div class="wifi-chips-row">
+        <span>Disarankan terhubung ke Wi-Fi resmi:</span>
+        <span class="wifi-badge-pill">📶 ITB Hot Spot</span>
       </div>
     </div>
 
@@ -438,7 +466,7 @@
             <div class="warning-icon">📍</div>
             <div>
               <strong>Ketentuan Lokasi Panggilan:</strong>
-              <div>Pastikan Anda sedang <strong>berada di sekitar lingkungan kampus SBM ITB Jakarta</strong> dan disarankan terhubung ke Wi-Fi <strong>ITB Hot Spot</strong> atau <strong>ITB Guest</strong>.</div>
+              <div>Pastikan Anda sedang <strong>berada di sekitar lingkungan kampus SBM ITB Jakarta</strong> dan disarankan terhubung ke Wi-Fi <strong>ITB Hot Spot</strong>.</div>
             </div>
           </div>
 
@@ -536,6 +564,7 @@
     <p>© 2026 SBM ITB Jakarta - Tim Dukungan Operasional & Teknis Perkuliahan</p>
   </footer>
 
+  <script src="/js/audio-notifier.js"></script>
   <script src="/js/call.js"></script>
 </body>
 </html>
