@@ -164,6 +164,51 @@
           </div>
         </div>
 
+        <!-- Section: Geofencing (GPS Verification) -->
+        <div style="border-top: 2px dashed #CBD5E1; padding-top: 16px; margin-top: 20px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <span style="font-size: 1.3rem;">📍</span>
+            <h3 style="font-size: 1.1rem; color: #DC2626; margin: 0;">Validasi Lokasi Kampus (Geofencing GPS)</h3>
+          </div>
+
+          <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #991B1B; margin-bottom: 14px;">
+            Fitur ini memastikan hanya pengguna yang berada di area gedung kampus yang dapat mengirim panggilan bantuan saat menggunakan URL Vercel. Pengguna di luar radius kampus akan otomatis diblokir.
+          </div>
+
+          <!-- Geofencing Toggle -->
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; cursor: pointer;">
+              <input type="checkbox" id="geoEnabled" checked style="width: 18px; height: 18px; accent-color: #DC2626;">
+              <span>Aktifkan Validasi Lokasi GPS (Geofencing)</span>
+            </label>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <!-- Latitude -->
+            <div class="form-group">
+              <label class="form-label" for="geoLat">Latitude Kampus:</label>
+              <input type="number" step="any" id="geoLat" class="form-control" value="-6.23933">
+            </div>
+
+            <!-- Longitude -->
+            <div class="form-group">
+              <label class="form-label" for="geoLon">Longitude Kampus:</label>
+              <input type="number" step="any" id="geoLon" class="form-control" value="106.83228">
+            </div>
+
+            <!-- Radius -->
+            <div class="form-group">
+              <label class="form-label" for="geoRadius">Radius Maksimal (Meter):</label>
+              <input type="number" id="geoRadius" class="form-control" value="250">
+              <small style="color: var(--text-muted); font-size: 0.75rem;">Default 250 meter (toleransi indoor).</small>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-outline" id="btnGetCurrentLocation" style="margin-top: 4px; font-size: 0.85rem; padding: 6px 12px;">
+            🎯 Gunakan Lokasi Saya Saat Ini
+          </button>
+        </div>
+
         <!-- Section: General Settings -->
         <div style="border-top: 2px dashed #CBD5E1; padding-top: 16px; margin-top: 20px;">
           <!-- Message Template -->

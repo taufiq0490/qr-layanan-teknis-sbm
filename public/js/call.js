@@ -27,11 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnConfirmSend = document.getElementById('btnConfirmSend');
   const modalRoomName = document.getElementById('modalRoomName');
   const modalOptionBtns = document.querySelectorAll('.modal-option-btn');
-  const manualInputGroup = document.getElementById('manualInputGroup');
-  const inputCustomNotes = document.getElementById('inputCustomNotes');
-  const optionalNoteGroup = document.getElementById('optionalNoteGroup');
   const inputOptionalNotes = document.getElementById('inputOptionalNotes');
-  const checkWifiConfirm = document.getElementById('checkWifiConfirm');
 
   // Tracking View Elements
   const step1 = document.getElementById('step1');
@@ -48,6 +44,41 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedCategory = 'Connect Smart Board/Projector';
   let activeTicketId = null;
   let pollInterval = null;
+  let geofencingConfig = {
+    enabled: true,
+    campusName: "SBM ITB Jakarta (Graha Irama)",
+    latitude: -6.23933,
+    longitude: 106.83228,
+    maxRadiusMeters: 250
+  };
+
+  // Haversine distance calculator
+  function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371e3;
+    const p1 = lat1 * Math.PI / 180;
+    const p2 = lat2 * Math.PI / 180;
+    const dp = (lat2 - lat1) * Math.PI / 180;
+    const dl = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dp/2) * Math.sin(dp/2) +
+              Math.cos(p1) * Math.cos(p2) *
+              Math.sin(dl/2) * Math.sin(dl/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  // Load app info (including geofencing settings)
+  async function loadAppInfo() {
+    try {
+      const res = await fetch('/api/info');
+      const data = await res.json();
+      if (data.geofencing) {
+        geofencingConfig = data.geofencing;
+      }
+    } catch (e) {
+      console.warn('Load info error:', e);
+    }
+  }
+  loadAppInfo();
 
   // Set room name display safely
   displayRoomName.textContent = roomParam;
@@ -83,16 +114,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Open Modal on "PANGGIL BANTUAN SEGERA" Click
   btnCallNow.addEventListener('click', () => {
-    openModal();
-  });
-
-  function openModal() {
     categoryModal.style.display = 'flex';
-    // Default focus/check
-    if (selectedCategory === 'Lainnya') {
-      setTimeout(() => inputCustomNotes && inputCustomNotes.focus(), 150);
-    }
-  }
+  });
 
   function closeModal() {
     categoryModal.style.display = 'none';
@@ -115,15 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
       modalOptionBtns.forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
       selectedCategory = btn.getAttribute('data-category');
-
-      if (selectedCategory === 'Lainnya') {
-        manualInputGroup.style.display = 'block';
-        optionalNoteGroup.style.display = 'none';
-        inputCustomNotes.focus();
-      } else {
-        manualInputGroup.style.display = 'none';
-        optionalNoteGroup.style.display = 'block';
-      }
     });
   });
 
@@ -133,30 +147,63 @@ document.addEventListener('DOMContentLoaded', () => {
     btnConfirmSend.innerHTML = '<span>🚨 Kirim Panggilan</span>';
   }
 
+  // Get current position using browser Geolocation API
+  function getCoordinates() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        return reject(new Error('Browser Anda tidak mendukung fitur lokasi GPS.'));
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          resolve({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy
+          });
+        },
+        (err) => {
+          reject(err);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
+  }
+
   // Confirm and Send Call Button Click
   btnConfirmSend.addEventListener('click', async () => {
-    // 1. Validate Wi-Fi confirmation
-    if (checkWifiConfirm && !checkWifiConfirm.checked) {
-      alert('⚠️ Peringatan Jaringan Kampus:\n\nPanggilan bantuan hanya dapat diproses apabila Anda terhubung ke jaringan Wi-Fi ITB Hot Spot atau ITB Guest.');
-      checkWifiConfirm.focus();
-      return;
-    }
+    const finalCategory = selectedCategory || 'Connect Smart Board/Projector';
+    const finalNotes = inputOptionalNotes ? inputOptionalNotes.value.trim() : '';
 
-    // 2. Validate manual notes if "Lainnya" is selected
-    let finalCategory = selectedCategory;
-    let finalNotes = '';
+    let userLat = null;
+    let userLon = null;
 
-    if (selectedCategory === 'Lainnya') {
-      const customText = inputCustomNotes ? inputCustomNotes.value.trim() : '';
-      if (!customText) {
-        alert('Mohon tuliskan penjelasan kendala Anda pada kolom yang telah disediakan.');
-        inputCustomNotes.focus();
+    // GPS Geofencing Check
+    if (geofencingConfig && geofencingConfig.enabled !== false) {
+      btnConfirmSend.disabled = true;
+      btnConfirmSend.innerHTML = '<span class="spinner"></span> <span>Memverifikasi Lokasi Kampus...</span>';
+
+      try {
+        const coords = await getCoordinates();
+        userLat = coords.latitude;
+        userLon = coords.longitude;
+
+        const campusLat = geofencingConfig.latitude || -6.23933;
+        const campusLon = geofencingConfig.longitude || 106.83228;
+        const maxRadius = geofencingConfig.maxRadiusMeters || 250;
+        const distance = calculateDistanceMeters(userLat, userLon, campusLat, campusLon);
+
+        if (distance > maxRadius) {
+          const campusName = geofencingConfig.campusName || 'SBM ITB Jakarta';
+          alert(`🚫 Panggilan Ditolak (Di Luar Kampus):\n\nAnda terdeteksi berada di luar area kampus ${campusName} (Jarak: ~${Math.round(distance)} meter, batas: ${maxRadius}m).\n\nLayanan bantuan darurat ini hanya dapat digunakan saat berada di dalam area ruang kelas kampus.`);
+          resetModalButton();
+          return;
+        }
+      } catch (geoErr) {
+        console.warn('Geolocation error:', geoErr);
+        alert('📍 Izin Lokasi Diperlukan:\n\nUntuk memverifikasi bahwa panggilan bantuan berasal dari ruang kelas SBM ITB Jakarta, mohon aktifkan GPS dan izinkan akses lokasi pada browser HP Anda.');
+        resetModalButton();
         return;
       }
-      finalCategory = 'Lainnya';
-      finalNotes = customText;
-    } else {
-      finalNotes = inputOptionalNotes ? inputOptionalNotes.value.trim() : '';
     }
 
     // Disable button & show spinner
@@ -166,7 +213,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const payload = {
       room: roomParam,
       category: finalCategory,
-      notes: finalNotes
+      notes: finalNotes,
+      latitude: userLat,
+      longitude: userLon
     };
 
     try {
@@ -185,6 +234,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      if (response.status === 403) {
+        alert('🚫 ' + (data.error || 'Akses ditolak: di luar area kampus.'));
+        updateQuotaDisplay();
+        resetModalButton();
+        return;
+      }
+
       if (data.success && data.ticket) {
         activeTicketId = data.ticket.id;
         updateQuotaDisplay();
@@ -197,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (err) {
       console.error('Call error:', err);
-      alert('Koneksi bermasalah. Pastikan perangkat Anda terhubung ke jaringan Wi-Fi ITB Hot Spot atau ITB Guest.');
+      alert('Koneksi internet bermasalah. Silakan periksa kembali jaringan Anda dan coba lagi.');
       updateQuotaDisplay();
       resetModalButton();
     }
@@ -301,7 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
     activeTicketId = null;
     trackingBox.style.display = 'none';
     callCard.style.display = 'block';
-    if (inputCustomNotes) inputCustomNotes.value = '';
     if (inputOptionalNotes) inputOptionalNotes.value = '';
   });
 });

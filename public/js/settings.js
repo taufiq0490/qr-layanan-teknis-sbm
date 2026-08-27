@@ -68,6 +68,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       fonnteToken.value = (s.waGateway && s.waGateway.fonnteToken) || '';
       staffNumbersInput.value = (s.waGateway && s.waGateway.staffNumbers) ? s.waGateway.staffNumbers.join(', ') : '';
       
+      // Geofencing
+      const geo = s.geofencing || {};
+      const geoEnabled = document.getElementById('geoEnabled');
+      const geoLat = document.getElementById('geoLat');
+      const geoLon = document.getElementById('geoLon');
+      const geoRadius = document.getElementById('geoRadius');
+
+      if (geoEnabled) geoEnabled.checked = geo.enabled !== false;
+      if (geoLat) geoLat.value = geo.latitude ?? -6.23933;
+      if (geoLon) geoLon.value = geo.longitude ?? 106.83228;
+      if (geoRadius) geoRadius.value = geo.maxRadiusMeters ?? 250;
+
       messageTemplate.value = s.messageTemplate || "Mohon bantuan teknis di ruang {room} SEGERA!";
       if (claimBaseUrl) claimBaseUrl.value = s.claimBaseUrl || "https://qr-layanan-teknis-sbm.vercel.app";
       currentRooms = s.rooms || [
@@ -82,6 +94,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch (err) {
     console.error('Error loading settings:', err);
+  }
+
+  // Button: Get current location for Geofencing
+  const btnGetCurrentLocation = document.getElementById('btnGetCurrentLocation');
+  if (btnGetCurrentLocation) {
+    btnGetCurrentLocation.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        alert('Browser Anda tidak mendukung fitur lokasi GPS.');
+        return;
+      }
+      btnGetCurrentLocation.disabled = true;
+      btnGetCurrentLocation.textContent = '⏳ Mengambil koordinat GPS...';
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const geoLat = document.getElementById('geoLat');
+          const geoLon = document.getElementById('geoLon');
+          if (geoLat) geoLat.value = pos.coords.latitude.toFixed(6);
+          if (geoLon) geoLon.value = pos.coords.longitude.toFixed(6);
+          alert(`✅ Lokasi berhasil didapatkan!\n\nLatitude: ${pos.coords.latitude}\nLongitude: ${pos.coords.longitude}\nAkurasi: ±${Math.round(pos.coords.accuracy)} meter`);
+          btnGetCurrentLocation.disabled = false;
+          btnGetCurrentLocation.textContent = '🎯 Gunakan Lokasi Saya Saat Ini';
+        },
+        (err) => {
+          alert('❌ Gagal mendapatkan lokasi GPS: ' + err.message);
+          btnGetCurrentLocation.disabled = false;
+          btnGetCurrentLocation.textContent = '🎯 Gunakan Lokasi Saya Saat Ini';
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
   }
 
   function renderRoomTags() {
@@ -124,6 +167,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectedChannel = document.querySelector('input[name="notificationChannel"]:checked')?.value || 'both';
     const newPass = adminPasswordInput && adminPasswordInput.value.trim();
 
+    const geoEnabled = document.getElementById('geoEnabled');
+    const geoLat = document.getElementById('geoLat');
+    const geoLon = document.getElementById('geoLon');
+    const geoRadius = document.getElementById('geoRadius');
+
     const payload = {
       messageTemplate: messageTemplate.value.trim(),
       claimBaseUrl: claimBaseUrl ? claimBaseUrl.value.trim() : undefined,
@@ -139,6 +187,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         enabled: true,
         botToken: teleBotToken.value.trim(),
         chatIds: chatIds
+      },
+      geofencing: {
+        enabled: geoEnabled ? geoEnabled.checked : true,
+        latitude: geoLat ? parseFloat(geoLat.value) : -6.23933,
+        longitude: geoLon ? parseFloat(geoLon.value) : 106.83228,
+        maxRadiusMeters: geoRadius ? parseInt(geoRadius.value, 10) : 250
       }
     };
 

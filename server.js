@@ -148,6 +148,20 @@ function getLocalIp() {
   return 'localhost';
 }
 
+// Geofencing Helper (Haversine Formula)
+function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // meters
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
 let publicTunnelUrl = null;
 
 // --- AUTH API ROUTES ---
@@ -197,7 +211,14 @@ app.get('/api/info', (req, res) => {
       "Noni Purnomo",
       "Medco",
       "12A Room"
-    ]
+    ],
+    geofencing: config.geofencing || {
+      enabled: true,
+      campusName: "SBM ITB Jakarta (Graha Irama)",
+      latitude: -6.23933,
+      longitude: 106.83228,
+      maxRadiusMeters: 250
+    }
   });
 });
 
@@ -243,13 +264,42 @@ app.get('/api/call-quota', (req, res) => {
   });
 });
 
-// 2. Trigger Technical Call from Room (Protected with Rate Limit)
+// 2. Trigger Technical Call from Room (Protected with Rate Limit & Geofencing)
 app.post('/api/call', callRateLimiter, async (req, res) => {
   try {
-    const { room, category, notes } = req.body;
+    const { room, category, notes, latitude, longitude } = req.body;
     
     if (!room) {
       return res.status(400).json({ success: false, error: 'Nama ruangan wajib diisi.' });
+    }
+
+    const config = readConfig();
+    const geoConfig = config.geofencing || {};
+
+    // Geofencing GPS Verification
+    if (geoConfig.enabled !== false) {
+      const latNum = parseFloat(latitude);
+      const lonNum = parseFloat(longitude);
+
+      if (isNaN(latNum) || isNaN(lonNum)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Izin lokasi (GPS) diperlukan untuk memverifikasi bahwa Anda berada di area kampus SBM ITB Jakarta.'
+        });
+      }
+
+      const campusLat = geoConfig.latitude || -6.23933;
+      const campusLon = geoConfig.longitude || 106.83228;
+      const maxRadius = geoConfig.maxRadiusMeters || 250;
+      const distance = calculateDistanceMeters(latNum, lonNum, campusLat, campusLon);
+
+      if (distance > maxRadius) {
+        const campusName = geoConfig.campusName || 'SBM ITB Jakarta';
+        return res.status(403).json({
+          success: false,
+          error: `Panggilan ditolak: Anda terdeteksi berada di luar area kampus ${campusName} (Jarak terdeteksi: ~${Math.round(distance)} meter, batas: ${maxRadius} meter). Panggilan bantuan darurat hanya dapat digunakan di dalam area ruang kelas kampus.`
+        });
+      }
     }
 
     const safeRoom = sanitizeString(room);
@@ -260,7 +310,6 @@ app.post('/api/call', callRateLimiter, async (req, res) => {
     const ticket = createTicket(safeRoom, safeCategory, safeNotes);
 
     // Send notifications based on configured channel (wa, telegram, or both)
-    const config = readConfig();
     const channel = config.notificationChannel || 'both';
 
     let waResult = { success: false, mode: 'skipped' };
@@ -477,6 +526,13 @@ app.get('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
         botToken: maskToken(rawTeleToken),
         hasBotToken: Boolean(rawTeleToken),
         chatIds: config.telegramGateway?.chatIds || []
+      },
+      geofencing: {
+        enabled: config.geofencing?.enabled !== false,
+        campusName: config.geofencing?.campusName || "SBM ITB Jakarta (Graha Irama)",
+        latitude: config.geofencing?.latitude ?? -6.23933,
+        longitude: config.geofencing?.longitude ?? 106.83228,
+        maxRadiusMeters: config.geofencing?.maxRadiusMeters ?? 250
       }
     }
   });
@@ -484,7 +540,7 @@ app.get('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
 
 // 7. Save Settings (Admin - Protected with SAFE TOKEN PRESERVATION)
 app.post('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
-  const { appTitle, rooms, messageTemplate, claimBaseUrl, notificationChannel, waGateway, telegramGateway, adminPassword } = req.body;
+  const { appTitle, rooms, messageTemplate, claimBaseUrl, notificationChannel, waGateway, telegramGateway, adminPassword, geofencing } = req.body;
   const currentConfig = readConfig();
 
   // If WA token is masked or not provided, preserve existing token
@@ -525,6 +581,13 @@ app.post('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
       enabled: telegramGateway?.enabled !== false,
       botToken: teleTokenToSave,
       chatIds: Array.isArray(telegramGateway?.chatIds) ? telegramGateway.chatIds : (currentConfig.telegramGateway?.chatIds || [])
+    },
+    geofencing: {
+      enabled: geofencing?.enabled !== false,
+      campusName: geofencing?.campusName ? sanitizeString(geofencing.campusName) : (currentConfig.geofencing?.campusName || "SBM ITB Jakarta (Graha Irama)"),
+      latitude: (typeof geofencing?.latitude === 'number' && !isNaN(geofencing.latitude)) ? geofencing.latitude : (currentConfig.geofencing?.latitude ?? -6.23933),
+      longitude: (typeof geofencing?.longitude === 'number' && !isNaN(geofencing.longitude)) ? geofencing.longitude : (currentConfig.geofencing?.longitude ?? 106.83228),
+      maxRadiusMeters: (typeof geofencing?.maxRadiusMeters === 'number' && !isNaN(geofencing.maxRadiusMeters)) ? geofencing.maxRadiusMeters : (currentConfig.geofencing?.maxRadiusMeters ?? 250)
     }
   };
 

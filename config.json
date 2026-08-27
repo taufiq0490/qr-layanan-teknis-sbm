@@ -27,5 +27,12 @@
     "chatIds": [
       "-5411652328"
     ]
+  },
+  "geofencing": {
+    "enabled": true,
+    "campusName": "SBM ITB Jakarta (Graha Irama)",
+    "latitude": -6.23933,
+    "longitude": 106.83228,
+    "maxRadiusMeters": 250
   }
 }
