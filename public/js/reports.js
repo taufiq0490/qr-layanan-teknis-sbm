@@ -26,7 +26,7 @@ let availableRooms = [];
 let chartTimeline = null;
 let chartCategory = null;
 let chartRoom = null;
-let chartStatus = null;
+let chartHourly = null;
 
 // Palette Colors
 const SBM_COLORS = [
@@ -55,27 +55,35 @@ function setupEventListeners() {
   });
 
   // Date and Select Filters
-  document.getElementById('startDate').addEventListener('change', () => {
-    clearActivePreset();
-    applyFilters();
-  });
-  document.getElementById('endDate').addEventListener('change', () => {
-    clearActivePreset();
-    applyFilters();
-  });
-  document.getElementById('filterRoom').addEventListener('change', applyFilters);
-  document.getElementById('filterCategory').addEventListener('change', applyFilters);
-  document.getElementById('filterStatus').addEventListener('change', applyFilters);
+  const startDate = document.getElementById('startDate');
+  const endDate = document.getElementById('endDate');
+  const filterRoom = document.getElementById('filterRoom');
+  const filterCategory = document.getElementById('filterCategory');
+  const filterStatus = document.getElementById('filterStatus');
+  const tableSearch = document.getElementById('tableSearch');
+  const btnResetFilter = document.getElementById('btnResetFilter');
+  const btnExportExcel = document.getElementById('btnExportExcel');
+  const btnExportPDF = document.getElementById('btnExportPDF');
 
-  // Search input
-  document.getElementById('tableSearch').addEventListener('input', applyFilters);
-
-  // Reset Filter Button
-  document.getElementById('btnResetFilter').addEventListener('click', resetFilters);
-
-  // Export Buttons
-  document.getElementById('btnExportExcel').addEventListener('click', exportToExcel);
-  document.getElementById('btnExportPDF').addEventListener('click', exportToPDF);
+  if (startDate) {
+    startDate.addEventListener('change', () => {
+      clearActivePreset();
+      applyFilters();
+    });
+  }
+  if (endDate) {
+    endDate.addEventListener('change', () => {
+      clearActivePreset();
+      applyFilters();
+    });
+  }
+  if (filterRoom) filterRoom.addEventListener('change', applyFilters);
+  if (filterCategory) filterCategory.addEventListener('change', applyFilters);
+  if (filterStatus) filterStatus.addEventListener('change', applyFilters);
+  if (tableSearch) tableSearch.addEventListener('input', applyFilters);
+  if (btnResetFilter) btnResetFilter.addEventListener('click', resetFilters);
+  if (btnExportExcel) btnExportExcel.addEventListener('click', exportToExcel);
+  if (btnExportPDF) btnExportPDF.addEventListener('click', exportToPDF);
 }
 
 function clearActivePreset() {
@@ -90,8 +98,10 @@ async function loadRooms() {
     if (data.rooms) {
       availableRooms = data.rooms;
       const roomSelect = document.getElementById('filterRoom');
-      roomSelect.innerHTML = '<option value="all">Semua Ruangan</option>' + 
-        availableRooms.map(r => `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`).join('');
+      if (roomSelect) {
+        roomSelect.innerHTML = '<option value="all">Semua Ruangan</option>' + 
+          availableRooms.map(r => `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`).join('');
+      }
     }
   } catch (err) {
     console.error('Error loading rooms:', err);
@@ -116,7 +126,7 @@ async function loadTickets() {
       return;
     }
     const data = await res.json();
-    if (data.success && data.tickets) {
+    if (data.success && Array.isArray(data.tickets)) {
       allTickets = data.tickets;
 
       // Populate Category filter options from real data
@@ -124,24 +134,31 @@ async function loadTickets() {
 
       // Apply default filter (Semua)
       applyFilters();
+    } else {
+      throw new Error(data.error || 'Format data tiket tidak sesuai.');
     }
   } catch (err) {
     console.error('Error loading tickets for reports:', err);
-    document.getElementById('reportTableBody').innerHTML = `
-      <tr>
-        <td colspan="7" style="text-align: center; padding: 24px; color: var(--danger);">
-          Gagal memuat data laporan dari server.
-        </td>
-      </tr>
-    `;
+    const tbody = document.getElementById('reportTableBody');
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 24px; color: var(--danger);">
+            Gagal memuat data laporan dari server: ${escapeHTML(err.message || 'Terjadi kesalahan sistem')}
+          </td>
+        </tr>
+      `;
+    }
   }
 }
 
 function populateCategories() {
-  const categories = Array.from(new Set(allTickets.map(t => t.category || 'Umum'))).sort();
   const categorySelect = document.getElementById('filterCategory');
+  if (!categorySelect) return;
+  const currentVal = categorySelect.value || 'all';
+  const categories = Array.from(new Set(allTickets.map(t => t.category || 'Umum'))).sort();
   categorySelect.innerHTML = '<option value="all">Semua Kategori</option>' +
-    categories.map(c => `<option value="${c}">${c}</option>`).join('');
+    categories.map(c => `<option value="${escapeHTML(c)}" ${c === currentVal ? 'selected' : ''}>${escapeHTML(c)}</option>`).join('');
 }
 
 // 4. Period Preset Logic
@@ -151,26 +168,26 @@ function applyPeriodPreset(preset) {
   const now = new Date();
 
   if (preset === 'all') {
-    startInput.value = '';
-    endInput.value = '';
+    if (startInput) startInput.value = '';
+    if (endInput) endInput.value = '';
   } else if (preset === 'today') {
     const todayStr = toDateInputValue(now);
-    startInput.value = todayStr;
-    endInput.value = todayStr;
+    if (startInput) startInput.value = todayStr;
+    if (endInput) endInput.value = todayStr;
   } else if (preset === '7days') {
     const past7 = new Date();
     past7.setDate(now.getDate() - 6);
-    startInput.value = toDateInputValue(past7);
-    endInput.value = toDateInputValue(now);
+    if (startInput) startInput.value = toDateInputValue(past7);
+    if (endInput) endInput.value = toDateInputValue(now);
   } else if (preset === '30days') {
     const past30 = new Date();
     past30.setDate(now.getDate() - 29);
-    startInput.value = toDateInputValue(past30);
-    endInput.value = toDateInputValue(now);
+    if (startInput) startInput.value = toDateInputValue(past30);
+    if (endInput) endInput.value = toDateInputValue(now);
   } else if (preset === 'thismonth') {
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    startInput.value = toDateInputValue(firstDay);
-    endInput.value = toDateInputValue(now);
+    if (startInput) startInput.value = toDateInputValue(firstDay);
+    if (endInput) endInput.value = toDateInputValue(now);
   }
 
   applyFilters();
@@ -183,12 +200,19 @@ function toDateInputValue(date) {
 }
 
 function resetFilters() {
-  document.getElementById('startDate').value = '';
-  document.getElementById('endDate').value = '';
-  document.getElementById('filterRoom').value = 'all';
-  document.getElementById('filterCategory').value = 'all';
-  document.getElementById('filterStatus').value = 'all';
-  document.getElementById('tableSearch').value = '';
+  const startInput = document.getElementById('startDate');
+  const endInput = document.getElementById('endDate');
+  const filterRoom = document.getElementById('filterRoom');
+  const filterCategory = document.getElementById('filterCategory');
+  const filterStatus = document.getElementById('filterStatus');
+  const tableSearch = document.getElementById('tableSearch');
+
+  if (startInput) startInput.value = '';
+  if (endInput) endInput.value = '';
+  if (filterRoom) filterRoom.value = 'all';
+  if (filterCategory) filterCategory.value = 'all';
+  if (filterStatus) filterStatus.value = 'all';
+  if (tableSearch) tableSearch.value = '';
 
   const periodBtns = document.querySelectorAll('.btn-filter[data-period]');
   periodBtns.forEach(b => b.classList.remove('active'));
@@ -200,12 +224,12 @@ function resetFilters() {
 
 // 5. Main Filter Engine
 function applyFilters() {
-  const startDateVal = document.getElementById('startDate').value;
-  const endDateVal = document.getElementById('endDate').value;
-  const selectedRoom = document.getElementById('filterRoom').value;
-  const selectedCategory = document.getElementById('filterCategory').value;
-  const selectedStatus = document.getElementById('filterStatus').value;
-  const searchVal = document.getElementById('tableSearch').value.toLowerCase().trim();
+  const startDateVal = document.getElementById('startDate')?.value;
+  const endDateVal = document.getElementById('endDate')?.value;
+  const selectedRoom = document.getElementById('filterRoom')?.value || 'all';
+  const selectedCategory = document.getElementById('filterCategory')?.value || 'all';
+  const selectedStatus = document.getElementById('filterStatus')?.value || 'all';
+  const searchVal = document.getElementById('tableSearch')?.value?.toLowerCase().trim() || '';
 
   let startDateTime = startDateVal ? new Date(startDateVal + 'T00:00:00') : null;
   let endDateTime = endDateVal ? new Date(endDateVal + 'T23:59:59.999') : null;
@@ -214,8 +238,8 @@ function applyFilters() {
     const ticketDate = new Date(ticket.createdAt);
 
     // Date Range Filter
-    if (startDateTime && ticketDate < startDateTime) return false;
-    if (endDateTime && ticketDate > endDateTime) return false;
+    if (startDateTime && !isNaN(ticketDate) && ticketDate < startDateTime) return false;
+    if (endDateTime && !isNaN(ticketDate) && ticketDate > endDateTime) return false;
 
     // Room Filter
     if (selectedRoom !== 'all' && ticket.room !== selectedRoom) return false;
@@ -232,17 +256,37 @@ function applyFilters() {
       const catMatch = (ticket.category || '').toLowerCase().includes(searchVal);
       const notesMatch = (ticket.notes || '').toLowerCase().includes(searchVal);
       const idMatch = (ticket.id || '').toLowerCase().includes(searchVal);
-      if (!roomMatch && !catMatch && !notesMatch && !idMatch) return false;
+      const handlerMatch = (ticket.handledBy || '').toLowerCase().includes(searchVal);
+      if (!roomMatch && !catMatch && !notesMatch && !idMatch && !handlerMatch) return false;
     }
 
     return true;
   });
 
-  // Update UI Components
-  updateKPIs();
-  updateCharts();
-  renderTable();
-  updatePrintHeaderInfo();
+  // Update UI Components safely
+  try {
+    updateKPIs();
+  } catch (e) {
+    console.error('KPI error:', e);
+  }
+
+  try {
+    updateCharts();
+  } catch (e) {
+    console.error('Chart error:', e);
+  }
+
+  try {
+    renderTable();
+  } catch (e) {
+    console.error('Table error:', e);
+  }
+
+  try {
+    updatePrintHeaderInfo();
+  } catch (e) {
+    console.error('Print header error:', e);
+  }
 }
 
 function formatDuration(seconds) {
@@ -263,20 +307,30 @@ function updateKPIs() {
   const selesai = completedTickets.length;
   const rate = total > 0 ? Math.round((selesai / total) * 100) : 0;
 
-  document.getElementById('kpiTotal').textContent = total;
-  document.getElementById('kpiSelesai').textContent = selesai;
-  document.getElementById('kpiRate').textContent = `${rate}% rasio selesai`;
+  const kpiTotal = document.getElementById('kpiTotal');
+  const kpiSelesai = document.getElementById('kpiSelesai');
+  const kpiRate = document.getElementById('kpiRate');
+  const kpiAvgDuration = document.getElementById('kpiAvgDuration');
+  const kpiAvgDurationSubtitle = document.getElementById('kpiAvgDurationSubtitle');
+  const kpiTopRoom = document.getElementById('kpiTopRoom');
+  const kpiTopRoomCount = document.getElementById('kpiTopRoomCount');
+  const kpiTopCategory = document.getElementById('kpiTopCategory');
+  const kpiTopCategoryCount = document.getElementById('kpiTopCategoryCount');
+
+  if (kpiTotal) kpiTotal.textContent = total;
+  if (kpiSelesai) kpiSelesai.textContent = selesai;
+  if (kpiRate) kpiRate.textContent = `${rate}% rasio selesai`;
 
   // Average Resolution Duration
   const ticketsWithDuration = completedTickets.filter(t => typeof t.resolutionTimeSeconds === 'number' && t.resolutionTimeSeconds > 0);
   if (ticketsWithDuration.length > 0) {
     const totalSecs = ticketsWithDuration.reduce((acc, t) => acc + t.resolutionTimeSeconds, 0);
     const avgSecs = Math.round(totalSecs / ticketsWithDuration.length);
-    document.getElementById('kpiAvgDuration').textContent = `~ ${formatDuration(avgSecs)}`;
-    document.getElementById('kpiAvgDurationSubtitle').textContent = `dari ${ticketsWithDuration.length} tiket selesai`;
+    if (kpiAvgDuration) kpiAvgDuration.textContent = `~ ${formatDuration(avgSecs)}`;
+    if (kpiAvgDurationSubtitle) kpiAvgDurationSubtitle.textContent = `dari ${ticketsWithDuration.length} tiket selesai`;
   } else {
-    document.getElementById('kpiAvgDuration').textContent = '-';
-    document.getElementById('kpiAvgDurationSubtitle').textContent = 'belum ada data selesai';
+    if (kpiAvgDuration) kpiAvgDuration.textContent = '-';
+    if (kpiAvgDurationSubtitle) kpiAvgDurationSubtitle.textContent = 'belum ada data selesai';
   }
 
   // Top Room
@@ -292,8 +346,8 @@ function updateKPIs() {
       topRoom = r;
     }
   }
-  document.getElementById('kpiTopRoom').textContent = topRoom;
-  document.getElementById('kpiTopRoomCount').textContent = maxRoomCount > 0 ? `${maxRoomCount} panggilan` : '0 panggilan';
+  if (kpiTopRoom) kpiTopRoom.textContent = topRoom;
+  if (kpiTopRoomCount) kpiTopRoomCount.textContent = maxRoomCount > 0 ? `${maxRoomCount} panggilan` : '0 panggilan';
 
   // Top Category
   const catCounts = {};
@@ -309,25 +363,32 @@ function updateKPIs() {
       topCategory = c;
     }
   }
-  document.getElementById('kpiTopCategory').textContent = topCategory;
-  document.getElementById('kpiTopCategoryCount').textContent = maxCatCount > 0 ? `${maxCatCount} laporan` : '0 laporan';
+  if (kpiTopCategory) kpiTopCategory.textContent = topCategory;
+  if (kpiTopCategoryCount) kpiTopCategoryCount.textContent = maxCatCount > 0 ? `${maxCatCount} laporan` : '0 laporan';
 }
 
 // 7. Update Charts (Chart.js)
 function updateCharts() {
+  if (typeof Chart === 'undefined') {
+    console.warn('Chart.js library is not available');
+    return;
+  }
   renderTimelineChart();
   renderCategoryChart();
   renderRoomChart();
-  renderStatusChart();
+  renderHourlyChart();
 }
 
 function renderTimelineChart() {
-  const ctx = document.getElementById('chartTimeline').getContext('2d');
+  const canvas = document.getElementById('chartTimeline');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
   
   // Group tickets by date
   const dateMap = {};
   filteredTickets.forEach(t => {
     const d = new Date(t.createdAt);
+    if (isNaN(d)) return;
     const dateKey = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
     dateMap[dateKey] = (dateMap[dateKey] || 0) + 1;
   });
@@ -367,7 +428,9 @@ function renderTimelineChart() {
 }
 
 function renderCategoryChart() {
-  const ctx = document.getElementById('chartCategory').getContext('2d');
+  const canvas = document.getElementById('chartCategory');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
   
   const catMap = {};
   filteredTickets.forEach(t => {
@@ -401,7 +464,9 @@ function renderCategoryChart() {
 }
 
 function renderRoomChart() {
-  const ctx = document.getElementById('chartRoom').getContext('2d');
+  const canvas = document.getElementById('chartRoom');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
   
   const roomMap = {};
   filteredTickets.forEach(t => {
@@ -445,38 +510,63 @@ function renderRoomChart() {
   });
 }
 
-function renderStatusChart() {
-  const ctx = document.getElementById('chartStatus').getContext('2d');
+function renderHourlyChart() {
+  const canvas = document.getElementById('chartHourly') || document.getElementById('chartStatus');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
   
-  const statusCounts = {
-    'Selesai': 0,
-    'Diproses': 0,
-    'Menunggu': 0
-  };
+  // Hours from 07:00 to 21:00
+  const hourBuckets = {};
+  for (let h = 7; h <= 21; h++) {
+    const key = String(h).padStart(2, '0') + ':00';
+    hourBuckets[key] = 0;
+  }
 
   filteredTickets.forEach(t => {
-    if (statusCounts[t.status] !== undefined) {
-      statusCounts[t.status]++;
+    const d = new Date(t.createdAt);
+    if (!isNaN(d)) {
+      const h = d.getHours();
+      const key = String(h).padStart(2, '0') + ':00';
+      if (hourBuckets[key] !== undefined) {
+        hourBuckets[key]++;
+      } else {
+        hourBuckets[key] = 1;
+      }
     }
   });
 
-  if (chartStatus) chartStatus.destroy();
+  const labels = Object.keys(hourBuckets);
+  const data = Object.values(hourBuckets);
 
-  chartStatus = new Chart(ctx, {
-    type: 'pie',
+  if (chartHourly) chartHourly.destroy();
+
+  chartHourly = new Chart(ctx, {
+    type: 'line',
     data: {
-      labels: ['Selesai', 'Diproses', 'Menunggu'],
+      labels,
       datasets: [{
-        data: [statusCounts['Selesai'], statusCounts['Diproses'], statusCounts['Menunggu']],
-        backgroundColor: ['#10B981', '#2563EB', '#F59E0B'],
-        borderWidth: 1
+        label: 'Panggilan per Jam',
+        data,
+        backgroundColor: 'rgba(37, 99, 235, 0.15)',
+        borderColor: '#2563EB',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: '#1D4ED8'
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1 }
+        }
       }
     }
   });
@@ -487,7 +577,11 @@ function renderTable() {
   const tbody = document.getElementById('reportTableBody');
   const summaryText = document.getElementById('tableSummaryText');
 
-  summaryText.textContent = `Menampilkan ${filteredTickets.length} data tiket`;
+  if (summaryText) {
+    summaryText.textContent = `Menampilkan ${filteredTickets.length} data tiket`;
+  }
+
+  if (!tbody) return;
 
   if (filteredTickets.length === 0) {
     tbody.innerHTML = `
@@ -502,13 +596,13 @@ function renderTable() {
 
   tbody.innerHTML = filteredTickets.map((t, index) => {
     const d = new Date(t.createdAt);
-    const dateStr = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-    const timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+    const dateStr = !isNaN(d) ? d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+    const timeStr = !isNaN(d) ? d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : '-';
 
     let completedInfo = '<span style="color: #94A3B8; font-size: 0.8rem;">-</span>';
     if (t.completedAt) {
       const compD = new Date(t.completedAt);
-      const compTimeStr = compD.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+      const compTimeStr = !isNaN(compD) ? compD.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : '-';
       completedInfo = `
         <div style="font-weight: 700; color: #059669; font-size: 0.85rem;">${compTimeStr}</div>
         <div style="font-size: 0.75rem; color: #2563EB; font-weight: 600;">⏱️ ${formatDuration(t.resolutionTimeSeconds)}</div>
@@ -519,7 +613,7 @@ function renderTable() {
     if (t.status === 'Diproses') badgeClass = 'badge-diproses';
     if (t.status === 'Selesai') badgeClass = 'badge-selesai';
 
-    const safeRoom = escapeHTML(t.room);
+    const safeRoom = escapeHTML(t.room || '-');
     const safeCategory = escapeHTML(t.category || 'Umum');
     const safeNotes = escapeHTML(t.notes);
     const safeHandledBy = escapeHTML(t.handledBy || '-');
@@ -546,7 +640,7 @@ function renderTable() {
           </span>
         </td>
         <td>
-          <span class="badge ${badgeClass}">${t.status}</span>
+          <span class="badge ${badgeClass}">${escapeHTML(t.status || 'Menunggu')}</span>
         </td>
         <td>
           <span style="color: ${t.notes ? '#334155' : '#94A3B8'}; font-style: ${t.notes ? 'normal' : 'italic'}; font-size: 0.85rem;">
@@ -560,13 +654,14 @@ function renderTable() {
 
 // 9. Update Official Print Header Metadata
 function updatePrintHeaderInfo() {
-  const startDateVal = document.getElementById('startDate').value;
-  const endDateVal = document.getElementById('endDate').value;
+  const startDateVal = document.getElementById('startDate')?.value;
+  const endDateVal = document.getElementById('endDate')?.value;
   const periodText = (startDateVal || endDateVal) 
     ? `Periode: ${startDateVal || 'Awal'} s/d ${endDateVal || 'Sekarang'}`
     : 'Periode: Seluruh Data Tercatat';
 
-  document.getElementById('printReportPeriod').textContent = periodText;
+  const periodEl = document.getElementById('printReportPeriod');
+  if (periodEl) periodEl.textContent = periodText;
 
   const now = new Date();
   const dateGenerated = now.toLocaleDateString('id-ID', { 
@@ -576,7 +671,8 @@ function updatePrintHeaderInfo() {
     year: 'numeric' 
   }) + ' pukul ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
 
-  document.getElementById('printGeneratedDate').textContent = `Dicetak pada: ${dateGenerated}`;
+  const genEl = document.getElementById('printGeneratedDate');
+  if (genEl) genEl.textContent = `Dicetak pada: ${dateGenerated}`;
 }
 
 // 10. Export to Excel / CSV (UTF-8 BOM for Excel Windows Compatibility)
@@ -590,14 +686,14 @@ function exportToExcel() {
   
   const rows = filteredTickets.map((t, idx) => {
     const d = new Date(t.createdAt);
-    const dateStr = d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = !isNaN(d) ? d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+    const timeStr = !isNaN(d) ? d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
     
     let compTimeStr = '-';
     let durationStr = '-';
     if (t.completedAt) {
       const compD = new Date(t.completedAt);
-      compTimeStr = compD.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      compTimeStr = !isNaN(compD) ? compD.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
       durationStr = formatDuration(t.resolutionTimeSeconds);
     }
 

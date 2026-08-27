@@ -1,1 +1,108 @@
-[]
+[
+  {
+    "id": "TICK-MTB2OD9Y-175",
+    "room": "Henk Uno",
+    "category": "Connect Smart Board/Projector",
+    "notes": "Test kendala proyektor",
+    "status": "Menunggu",
+    "handledBy": "",
+    "createdAt": "2026-08-27T05:18:41.974Z",
+    "claimedAt": null,
+    "completedAt": null,
+    "resolutionTimeSeconds": null,
+    "updatedAt": "2026-08-27T05:18:42.972Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "telegram",
+      "timestamp": "2026-08-27T05:18:42.972Z",
+      "details": {
+        "waResult": {
+          "success": false,
+          "mode": "skipped"
+        },
+        "teleResult": {
+          "success": true,
+          "provider": "telegram",
+          "results": [
+            {
+              "chatId": "-5411652328",
+              "success": true,
+              "data": {
+                "ok": true,
+                "result": {
+                  "message_id": 31,
+                  "from": {
+                    "id": 8781937865,
+                    "is_bot": true,
+                    "first_name": "SBM ITB Support",
+                    "username": "SBMITB_Support_bot"
+                  },
+                  "chat": {
+                    "id": -5411652328,
+                    "title": "SBM ITB JKT",
+                    "type": "group",
+                    "all_members_are_administrators": false
+                  },
+                  "date": 1787807922,
+                  "text": "🚨 PANGGILAN BANTUAN TEKNIS SBM ITB\n\nMohon bantuan di ruang Henk Uno SEGERA!\n\n📌 Kendala: Connect Smart Board/Projector\n📝 Catatan: Test kendala proyektor\n\n🕒 Waktu: 27 Agu 2026, 12.18 WIB\n🆔 ID Tiket: #9Y-175",
+                  "entities": [
+                    {
+                      "offset": 3,
+                      "length": 32,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 60,
+                      "length": 8,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 81,
+                      "length": 8,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 123,
+                      "length": 8,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 132,
+                      "length": 22,
+                      "type": "italic"
+                    },
+                    {
+                      "offset": 159,
+                      "length": 6,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 192,
+                      "length": 9,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 202,
+                      "length": 7,
+                      "type": "code"
+                    }
+                  ],
+                  "reply_markup": {
+                    "inline_keyboard": [
+                      [
+                        {
+                          "text": "🚀 Klaim & Tangani Tiket",
+                          "url": "https://qr-layanan-teknis-sbm.vercel.app/claim?ticket=TICK-MTB2OD9Y-175"
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]
