@@ -12,9 +12,7 @@
   "waGateway": {
     "provider": "fonnte",
     "fonnteToken": "TxGywNUAMtKAdzKrCZoS",
-    "staffNumbers": [
-      "120363044455879559@g.us"
-    ],
+    "staffNumbers": [],
     "countryCode": "62",
     "webhookUrl": ""
   },
@@ -30,7 +28,7 @@
     ]
   },
   "geofencing": {
-    "enabled": true,
+    "enabled": false,
     "campusName": "SBM ITB Jakarta (Graha Irama)",
     "latitude": -6.23933,
     "longitude": 106.83228,
