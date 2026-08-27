@@ -92,59 +92,76 @@ function setupEventListeners() {
   if (tableSearch) tableSearch.addEventListener('input', applyFilters);
   if (btnResetFilter) btnResetFilter.addEventListener('click', resetFilters);
   if (btnExportPDF) btnExportPDF.addEventListener('click', exportToPDF);
-
-  // Google Sheet Modal Actions
-  if (btnOpenGoogleSheet) {
-    btnOpenGoogleSheet.addEventListener('click', () => {
-      const liveCsvUrl = window.location.origin + '/api/public/reports-csv';
-      const formulaText = `=IMPORTDATA("${liveCsvUrl}")`;
-      if (importDataFormula) importDataFormula.value = formulaText;
-
-      if (configuredGoogleSheetUrl && configuredGoogleSheetUrl.trim()) {
-        if (gsheetDirectBox) gsheetDirectBox.style.display = 'block';
-        if (linkGSheetTarget) linkGSheetTarget.href = configuredGoogleSheetUrl.trim();
-      } else {
-        if (gsheetDirectBox) gsheetDirectBox.style.display = 'none';
-      }
-
-      if (googleSheetModal) googleSheetModal.style.display = 'flex';
-    });
-  }
-
-  if (btnModalGSheetClose) {
-    btnModalGSheetClose.addEventListener('click', () => {
-      if (googleSheetModal) googleSheetModal.style.display = 'none';
-    });
-  }
+  if (btnOpenGoogleSheet) btnOpenGoogleSheet.addEventListener('click', () => window.handleOpenGoogleSheet());
 
   if (googleSheetModal) {
     googleSheetModal.addEventListener('click', (e) => {
       if (e.target === googleSheetModal) {
-        googleSheetModal.style.display = 'none';
-      }
-    });
-  }
-
-  if (btnCopyFormula) {
-    btnCopyFormula.addEventListener('click', () => {
-      if (importDataFormula) {
-        importDataFormula.select();
-        navigator.clipboard.writeText(importDataFormula.value).then(() => {
-          btnCopyFormula.textContent = '✅ Disalin!';
-          setTimeout(() => {
-            btnCopyFormula.textContent = '📋 Salin';
-          }, 2000);
-        }).catch(() => {
-          document.execCommand('copy');
-          btnCopyFormula.textContent = '✅ Disalin!';
-          setTimeout(() => {
-            btnCopyFormula.textContent = '📋 Salin';
-          }, 2000);
-        });
+        window.closeGoogleSheetModal();
       }
     });
   }
 }
+
+// Global Google Sheet Open Handler
+window.handleOpenGoogleSheet = function() {
+  const liveCsvUrl = window.location.origin + '/api/public/reports-csv';
+  const formulaText = `=IMPORTDATA("${liveCsvUrl}")`;
+  const importDataFormula = document.getElementById('importDataFormula');
+  const gsheetDirectBox = document.getElementById('gsheetDirectBox');
+  const linkGSheetTarget = document.getElementById('linkGSheetTarget');
+  const googleSheetModal = document.getElementById('googleSheetModal');
+
+  if (importDataFormula) importDataFormula.value = formulaText;
+
+  if (configuredGoogleSheetUrl && configuredGoogleSheetUrl.trim()) {
+    if (gsheetDirectBox) gsheetDirectBox.style.display = 'block';
+    if (linkGSheetTarget) linkGSheetTarget.href = configuredGoogleSheetUrl.trim();
+    // Directly open the saved Google Sheet
+    window.open(configuredGoogleSheetUrl.trim(), '_blank');
+    return;
+  } else {
+    if (gsheetDirectBox) gsheetDirectBox.style.display = 'none';
+  }
+
+  // Show guide modal if URL is not yet configured
+  if (googleSheetModal) googleSheetModal.style.display = 'flex';
+};
+
+window.closeGoogleSheetModal = function() {
+  const googleSheetModal = document.getElementById('googleSheetModal');
+  if (googleSheetModal) googleSheetModal.style.display = 'none';
+};
+
+window.copyFormula = function(inputId, btnId) {
+  const input = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  if (!input) return;
+
+  input.select();
+  input.setSelectionRange(0, 99999);
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(input.value).then(() => {
+      if (btn) {
+        btn.textContent = '✅ Disalin!';
+        setTimeout(() => { btn.textContent = '📋 Salin'; }, 2000);
+      }
+    }).catch(() => {
+      document.execCommand('copy');
+      if (btn) {
+        btn.textContent = '✅ Disalin!';
+        setTimeout(() => { btn.textContent = '📋 Salin'; }, 2000);
+      }
+    });
+  } else {
+    document.execCommand('copy');
+    if (btn) {
+      btn.textContent = '✅ Disalin!';
+      setTimeout(() => { btn.textContent = '📋 Salin'; }, 2000);
+    }
+  }
+};
 
 function clearActivePreset() {
   document.querySelectorAll('.btn-filter[data-period]').forEach(b => b.classList.remove('active'));
