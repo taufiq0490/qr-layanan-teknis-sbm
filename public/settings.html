@@ -225,6 +225,15 @@
             <small style="color: var(--text-muted); font-size: 0.8rem;">Link tombol klaim instan di WhatsApp & Telegram.</small>
           </div>
 
+          <!-- Google Sheet Live Report URL -->
+          <div class="form-group">
+            <label class="form-label" for="googleSheetUrl">URL Dokumen Google Sheet Laporan (Akses Viewer):</label>
+            <input type="url" id="googleSheetUrl" class="form-control" placeholder="https://docs.google.com/spreadsheets/d/...">
+            <small style="color: var(--text-muted); font-size: 0.8rem;">
+              Masukkan link Google Sheet resmi Anda (Pastikan hak akses: <em>Anyone with the link can view</em>). Gunakan formula <code>=IMPORTDATA("...")</code> di cell A1 sheet untuk sinkronisasi otomatis.
+            </small>
+          </div>
+
           <!-- Admin Password Change -->
           <div class="form-group">
             <label class="form-label" for="adminPasswordInput">Ubah Kata Sandi Admin (Opsional):</label>

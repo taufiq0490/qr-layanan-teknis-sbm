@@ -34,5 +34,6 @@
     "latitude": -6.23933,
     "longitude": 106.83228,
     "maxRadiusMeters": 250
-  }
+  },
+  "googleSheetUrl": ""
 }

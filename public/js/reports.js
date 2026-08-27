@@ -21,6 +21,7 @@ async function handleLogout() {
 let allTickets = [];
 let filteredTickets = [];
 let availableRooms = [];
+let configuredGoogleSheetUrl = "";
 
 // Chart.js instances
 let chartTimeline = null;
@@ -62,8 +63,16 @@ function setupEventListeners() {
   const filterStatus = document.getElementById('filterStatus');
   const tableSearch = document.getElementById('tableSearch');
   const btnResetFilter = document.getElementById('btnResetFilter');
-  const btnExportExcel = document.getElementById('btnExportExcel');
+  const btnOpenGoogleSheet = document.getElementById('btnOpenGoogleSheet');
   const btnExportPDF = document.getElementById('btnExportPDF');
+
+  // Google Sheet Modal Elements
+  const googleSheetModal = document.getElementById('googleSheetModal');
+  const btnModalGSheetClose = document.getElementById('btnModalGSheetClose');
+  const btnCopyFormula = document.getElementById('btnCopyFormula');
+  const importDataFormula = document.getElementById('importDataFormula');
+  const gsheetDirectBox = document.getElementById('gsheetDirectBox');
+  const linkGSheetTarget = document.getElementById('linkGSheetTarget');
 
   if (startDate) {
     startDate.addEventListener('change', () => {
@@ -82,8 +91,59 @@ function setupEventListeners() {
   if (filterStatus) filterStatus.addEventListener('change', applyFilters);
   if (tableSearch) tableSearch.addEventListener('input', applyFilters);
   if (btnResetFilter) btnResetFilter.addEventListener('click', resetFilters);
-  if (btnExportExcel) btnExportExcel.addEventListener('click', exportToExcel);
   if (btnExportPDF) btnExportPDF.addEventListener('click', exportToPDF);
+
+  // Google Sheet Modal Actions
+  if (btnOpenGoogleSheet) {
+    btnOpenGoogleSheet.addEventListener('click', () => {
+      const liveCsvUrl = window.location.origin + '/api/public/reports-csv';
+      const formulaText = `=IMPORTDATA("${liveCsvUrl}")`;
+      if (importDataFormula) importDataFormula.value = formulaText;
+
+      if (configuredGoogleSheetUrl && configuredGoogleSheetUrl.trim()) {
+        if (gsheetDirectBox) gsheetDirectBox.style.display = 'block';
+        if (linkGSheetTarget) linkGSheetTarget.href = configuredGoogleSheetUrl.trim();
+      } else {
+        if (gsheetDirectBox) gsheetDirectBox.style.display = 'none';
+      }
+
+      if (googleSheetModal) googleSheetModal.style.display = 'flex';
+    });
+  }
+
+  if (btnModalGSheetClose) {
+    btnModalGSheetClose.addEventListener('click', () => {
+      if (googleSheetModal) googleSheetModal.style.display = 'none';
+    });
+  }
+
+  if (googleSheetModal) {
+    googleSheetModal.addEventListener('click', (e) => {
+      if (e.target === googleSheetModal) {
+        googleSheetModal.style.display = 'none';
+      }
+    });
+  }
+
+  if (btnCopyFormula) {
+    btnCopyFormula.addEventListener('click', () => {
+      if (importDataFormula) {
+        importDataFormula.select();
+        navigator.clipboard.writeText(importDataFormula.value).then(() => {
+          btnCopyFormula.textContent = '✅ Disalin!';
+          setTimeout(() => {
+            btnCopyFormula.textContent = '📋 Salin';
+          }, 2000);
+        }).catch(() => {
+          document.execCommand('copy');
+          btnCopyFormula.textContent = '✅ Disalin!';
+          setTimeout(() => {
+            btnCopyFormula.textContent = '📋 Salin';
+          }, 2000);
+        });
+      }
+    });
+  }
 }
 
 function clearActivePreset() {
@@ -95,6 +155,9 @@ async function loadRooms() {
   try {
     const res = await fetch('/api/info');
     const data = await res.json();
+    if (data.googleSheetUrl) {
+      configuredGoogleSheetUrl = data.googleSheetUrl;
+    }
     if (data.rooms) {
       availableRooms = data.rooms;
       const roomSelect = document.getElementById('filterRoom');

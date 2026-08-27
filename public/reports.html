@@ -52,8 +52,8 @@
         </p>
       </div>
       <div class="export-actions">
-        <button class="btn btn-outline" id="btnExportExcel" style="background: white; border-color: #059669; color: #059669; font-weight: 700; padding: 6px 12px; font-size: 0.82rem;">
-          📑 Unduh Excel / CSV
+        <button class="btn btn-outline" id="btnOpenGoogleSheet" style="background: white; border-color: #0F9D58; color: #0F9D58; font-weight: 700; padding: 6px 12px; font-size: 0.82rem;">
+          📊 Buka Google Sheet Laporan
         </button>
         <button class="btn btn-primary" id="btnExportPDF" style="font-weight: 700; padding: 6px 12px; font-size: 0.82rem;">
           📄 Cetak / Ekspor PDF
@@ -251,6 +251,59 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Modal: Google Sheet Live Report (Viewer) -->
+    <div class="modal-backdrop no-print" id="googleSheetModal">
+      <div class="modal-card" style="max-width: 520px;">
+        <div class="modal-header">
+          <h3><span>📊</span> Laporan Google Sheet (Live Viewer)</h3>
+          <button class="modal-close-btn" id="btnModalGSheetClose" type="button" title="Tutup">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 20px;">
+          <p style="font-size: 0.88rem; color: #334155; margin-bottom: 14px; line-height: 1.5;">
+            Laporan data panggilan dapat dipantau secara langsung (*real-time*) dalam format spreadsheet yang dapat dibagikan kepada siapapun dengan akses <strong>Viewer</strong>.
+          </p>
+
+          <!-- Connected Google Sheet Box -->
+          <div id="gsheetDirectBox" style="display: none; background: #ECFDF5; border: 1.5px solid #6EE7B7; border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+            <div style="font-weight: 700; color: #065F46; font-size: 0.9rem; margin-bottom: 8px;">
+              ✅ Link Dokumen Google Sheet Resmi Telah Terhubung:
+            </div>
+            <a href="#" id="linkGSheetTarget" target="_blank" class="btn btn-success" style="width: 100%; text-decoration: none; padding: 10px; font-weight: 700; font-size: 0.95rem;">
+              🚀 Buka Google Sheet Laporan ➔
+            </a>
+          </div>
+
+          <!-- Formula Box for Auto-Sync -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+            <div style="font-weight: 700; font-size: 0.85rem; color: var(--primary); margin-bottom: 6px;">
+              ⚡ Rumus Sinkronisasi Otomatis Google Sheet:
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
+              Buka Google Sheet baru, lalu tempel rumus berikut pada cell <strong>A1</strong>:
+            </p>
+            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+              <input type="text" id="importDataFormula" class="form-control" readonly style="font-family: monospace; font-size: 0.8rem; background: white;" value="">
+              <button type="button" class="btn btn-outline" id="btnCopyFormula" style="padding: 6px 12px; font-size: 0.8rem; white-space: nowrap;">
+                📋 Salin
+              </button>
+            </div>
+            <div style="font-size: 0.76rem; color: #64748B;">
+              💡 <em>Data akan ter-update secara otomatis setiap kali dokumen Google Sheet dibuka.</em>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
+            <a href="https://sheets.new" target="_blank" class="btn btn-outline" style="font-size: 0.82rem; padding: 6px 12px;">
+              ➕ Buat Spreadsheet Baru
+            </a>
+            <a href="/admin/settings" class="btn btn-primary" style="font-size: 0.82rem; padding: 6px 12px;">
+              ⚙️ Ubah Link di Pengaturan
+            </a>
+          </div>
+        </div>
       </div>
     </div>
 

@@ -212,6 +212,7 @@ app.get('/api/info', (req, res) => {
       "Medco",
       "12A Room"
     ],
+    googleSheetUrl: config.googleSheetUrl || "",
     geofencing: config.geofencing || {
       enabled: true,
       campusName: "SBM ITB Jakarta (Graha Irama)",
@@ -220,6 +221,83 @@ app.get('/api/info', (req, res) => {
       maxRadiusMeters: 250
     }
   });
+});
+
+// 1.1 Public Live CSV Data for Google Sheets =IMPORTDATA(...)
+app.get('/api/public/reports-csv', (req, res) => {
+  try {
+    const tickets = readTickets() || [];
+    const headers = [
+      'No',
+      'ID Tiket',
+      'Tanggal Panggil',
+      'Jam Panggil',
+      'Waktu Selesai',
+      'Durasi Penanganan',
+      'Ruangan',
+      'Kategori Kendala',
+      'Petugas Support',
+      'Status Tiket',
+      'Catatan Tambahan',
+      'Terakhir Diperbarui'
+    ];
+
+    function formatDuration(seconds) {
+      if (!seconds || seconds <= 0) return '< 1 mnt';
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      if (m === 0) return `${s} dtk`;
+      if (m < 60) return s > 0 ? `${m} mnt ${s} dtk` : `${m} mnt`;
+      const h = Math.floor(m / 60);
+      const remM = m % 60;
+      return remM > 0 ? `${h} jam ${remM} mnt` : `${h} jam`;
+    }
+
+    const rows = tickets.map((t, idx) => {
+      const d = new Date(t.createdAt);
+      const dateStr = !isNaN(d) ? d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+      const timeStr = !isNaN(d) ? d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
+
+      let compTimeStr = '-';
+      let durationStr = '-';
+      if (t.completedAt) {
+        const compD = new Date(t.completedAt);
+        compTimeStr = !isNaN(compD) ? compD.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
+        durationStr = formatDuration(t.resolutionTimeSeconds);
+      }
+
+      const upD = t.updatedAt ? new Date(t.updatedAt) : null;
+      const updatedStr = upD && !isNaN(upD) ? upD.toLocaleString('id-ID') : '-';
+
+      return [
+        idx + 1,
+        `"${t.id || ''}"`,
+        `"${dateStr}"`,
+        `"${timeStr}"`,
+        `"${compTimeStr}"`,
+        `"${durationStr}"`,
+        `"${(t.room || '').replace(/"/g, '""')}"`,
+        `"${(t.category || 'Umum').replace(/"/g, '""')}"`,
+        `"${(t.handledBy || '-').replace(/"/g, '""')}"`,
+        `"${t.status || ''}"`,
+        `"${(t.notes || '').replace(/"/g, '""')}"`,
+        `"${updatedStr}"`
+      ];
+    });
+
+    const csvContent = '\uFEFF' + [
+      headers.join(','),
+      ...rows.map(r => r.join(','))
+    ].join('\r\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'inline; filename="laporan_layanan_teknis_sbm.csv"');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(csvContent);
+  } catch (err) {
+    console.error('Error generating public CSV:', err);
+    res.status(500).send('Error generating report');
+  }
 });
 
 // Set active public tunnel URL (from launcher script)
@@ -533,14 +611,15 @@ app.get('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
         latitude: config.geofencing?.latitude ?? -6.23933,
         longitude: config.geofencing?.longitude ?? 106.83228,
         maxRadiusMeters: config.geofencing?.maxRadiusMeters ?? 250
-      }
+      },
+      googleSheetUrl: config.googleSheetUrl || ""
     }
   });
 });
 
 // 7. Save Settings (Admin - Protected with SAFE TOKEN PRESERVATION)
 app.post('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
-  const { appTitle, rooms, messageTemplate, claimBaseUrl, notificationChannel, waGateway, telegramGateway, adminPassword, geofencing } = req.body;
+  const { appTitle, rooms, messageTemplate, claimBaseUrl, notificationChannel, waGateway, telegramGateway, adminPassword, geofencing, googleSheetUrl } = req.body;
   const currentConfig = readConfig();
 
   // If WA token is masked or not provided, preserve existing token
@@ -567,6 +646,7 @@ app.post('/api/admin/settings', requireAdminAuthAPI, (req, res) => {
     rooms: Array.isArray(rooms) ? rooms.map(sanitizeString).filter(r => r !== '') : currentConfig.rooms,
     messageTemplate: messageTemplate ? sanitizeString(messageTemplate) : currentConfig.messageTemplate,
     claimBaseUrl: claimBaseUrl ? sanitizeString(claimBaseUrl) : (currentConfig.claimBaseUrl || "https://qr-layanan-teknis-sbm.vercel.app"),
+    googleSheetUrl: typeof googleSheetUrl === 'string' ? googleSheetUrl.trim() : (currentConfig.googleSheetUrl || ""),
     notificationChannel: notificationChannel || currentConfig.notificationChannel || 'both',
     adminPassword: adminPassword && adminPassword.trim() ? adminPassword.trim() : currentConfig.adminPassword,
     waGateway: {

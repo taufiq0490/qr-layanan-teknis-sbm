@@ -82,6 +82,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       messageTemplate.value = s.messageTemplate || "Mohon bantuan teknis di ruang {room} SEGERA!";
       if (claimBaseUrl) claimBaseUrl.value = s.claimBaseUrl || "https://qr-layanan-teknis-sbm.vercel.app";
+      const googleSheetUrlInput = document.getElementById('googleSheetUrl');
+      if (googleSheetUrlInput) googleSheetUrlInput.value = s.googleSheetUrl || "";
       currentRooms = s.rooms || [
         "Henk Uno",
         "Kirana Megatara 1",
@@ -171,10 +173,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const geoLat = document.getElementById('geoLat');
     const geoLon = document.getElementById('geoLon');
     const geoRadius = document.getElementById('geoRadius');
+    const googleSheetUrlInput = document.getElementById('googleSheetUrl');
 
     const payload = {
       messageTemplate: messageTemplate.value.trim(),
       claimBaseUrl: claimBaseUrl ? claimBaseUrl.value.trim() : undefined,
+      googleSheetUrl: googleSheetUrlInput ? googleSheetUrlInput.value.trim() : undefined,
       notificationChannel: selectedChannel,
       adminPassword: newPass || undefined,
       rooms: currentRooms,
