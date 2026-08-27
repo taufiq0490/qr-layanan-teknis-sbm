@@ -10,18 +10,27 @@
       background: #EFF6FF;
       border: 1.5px solid #93C5FD;
       border-radius: 12px;
-      padding: 12px 14px;
-      margin-bottom: 14px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
       display: flex;
       align-items: flex-start;
-      gap: 10px;
-      font-size: 0.85rem;
+      gap: 12px;
+      font-size: 0.88rem;
       color: #1E3A8A;
-      box-shadow: 0 2px 6px rgba(30, 58, 138, 0.06);
+      box-shadow: 0 2px 8px rgba(30, 58, 138, 0.08);
     }
     .wifi-alert-banner .wifi-icon {
-      font-size: 1.3rem;
+      font-size: 1.5rem;
       line-height: 1;
+    }
+    .wifi-alert-banner .wifi-highlight {
+      display: inline-block;
+      background: #DBEAFE;
+      color: #1E40AF;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-top: 2px;
     }
     .rate-limit-badge {
       display: inline-flex;
@@ -39,7 +48,7 @@
     .call-card {
       background: white;
       border-radius: 16px;
-      padding: 22px 18px;
+      padding: 26px 20px;
       box-shadow: 0 10px 30px rgba(15, 44, 89, 0.08);
       border: 1px solid var(--border-color);
       text-align: center;
@@ -47,10 +56,10 @@
     .room-display {
       background: linear-gradient(135deg, #0F2C59 0%, #1A4D8F 100%);
       color: white;
-      padding: 14px 20px;
-      border-radius: 12px;
-      margin: 10px 0 18px;
-      box-shadow: 0 4px 12px rgba(15, 44, 89, 0.2);
+      padding: 16px 20px;
+      border-radius: 14px;
+      margin: 10px 0 22px;
+      box-shadow: 0 6px 16px rgba(15, 44, 89, 0.22);
     }
     .room-display .label {
       font-size: 0.8rem;
@@ -60,11 +69,190 @@
       font-weight: 700;
     }
     .room-display .room-name {
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       font-weight: 800;
       margin-top: 4px;
     }
     
+    /* Modal Styles */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      animation: fadeIn 0.25s ease-out;
+    }
+    .modal-card {
+      background: white;
+      border-radius: 18px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .modal-header {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid #E2E8F0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 2;
+    }
+    .modal-header h3 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal-close-btn {
+      background: #F1F5F9;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      cursor: pointer;
+      color: #64748B;
+      transition: all 0.2s;
+    }
+    .modal-close-btn:hover {
+      background: #E2E8F0;
+      color: #0F172A;
+    }
+    .modal-body {
+      padding: 18px 20px;
+    }
+    .modal-wifi-warning {
+      background: #FFFBEB;
+      border: 1.5px solid #F59E0B;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 10px;
+      font-size: 0.82rem;
+      color: #92400E;
+      line-height: 1.4;
+    }
+    .modal-wifi-warning .warning-icon {
+      font-size: 1.3rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .modal-options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .modal-option-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: #F8FAFC;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 12px;
+      cursor: pointer;
+      text-align: left;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1E293B;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+    .modal-option-btn:hover {
+      background: #F1F5F9;
+      border-color: #CBD5E1;
+      transform: translateY(-1px);
+    }
+    .modal-option-btn.selected {
+      background: #EFF6FF;
+      border-color: #2563EB;
+      color: #1D4ED8;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+    .modal-option-btn .opt-icon {
+      font-size: 1.25rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .modal-option-btn .opt-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #E2E8F0;
+      color: #475569;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .modal-option-btn.selected .opt-num {
+      background: #2563EB;
+      color: white;
+    }
+    .custom-input-group {
+      display: none;
+      margin-top: 8px;
+      margin-bottom: 16px;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .wifi-checkbox-group {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 18px;
+      font-size: 0.82rem;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wifi-checkbox-group input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #0F2C59;
+      cursor: pointer;
+    }
+    .modal-footer {
+      padding: 14px 20px 18px;
+      border-top: 1px solid #E2E8F0;
+      display: flex;
+      gap: 10px;
+      background: #F8FAFC;
+      border-bottom-left-radius: 18px;
+      border-bottom-right-radius: 18px;
+    }
+    .modal-footer .btn {
+      flex: 1;
+    }
+
     /* Live Tracking Box */
     .tracking-box {
       display: none;
@@ -186,8 +374,12 @@
       100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
     }
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
     .spinner {
       display: inline-block;
@@ -222,12 +414,15 @@
     <div class="wifi-alert-banner" id="wifiBanner">
       <div class="wifi-icon">📶</div>
       <div>
-        <strong>Pemberitahuan Jaringan Kampus:</strong>
-        <div>Untuk kenyamanan respon teknis, pastikan Anda berada di area kampus dan terhubung ke Wi-Fi <strong>ITB HOT SPOT</strong> atau <strong>ITB GUEST</strong>.</div>
+        <div style="font-weight: 800; font-size: 0.92rem; margin-bottom: 2px;">PERHATIAN JARINGAN WI-FI KAMPUS</div>
+        <div>Panggilan bantuan darurat hanya dapat digunakan apabila perangkat Anda terhubung ke jaringan Wi-Fi resmi kampus:</div>
+        <div style="margin-top: 4px;">
+          <span class="wifi-highlight">📶 ITB Hot Spot</span> atau <span class="wifi-highlight">📶 ITB Guest</span>
+        </div>
       </div>
     </div>
 
-    <!-- Call Form Card -->
+    <!-- Call Form Card (Clean initial view) -->
     <div class="call-card" id="callCard">
       
       <!-- Limit Notice Badge -->
@@ -247,41 +442,93 @@
         <span>🚨 PANGGIL BANTUAN SEGERA</span>
       </button>
 
-      <!-- Optional Category Selector -->
-      <div style="margin-top: 22px; text-align: left;">
-        <p style="font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 8px;">
-          Pilih Jenis Kendala (Opsional):
-        </p>
-        <div class="category-grid" id="categoryGrid">
-          <div class="chip-option selected" data-category="Umum">
-            <span>⚡</span> Umum / Cepat
-          </div>
-          <div class="chip-option" data-category="Proyektor / Layar">
-            <span>📽️</span> Proyektor / Layar
-          </div>
-          <div class="chip-option" data-category="Mic / Sound Audio">
-            <span>🎤</span> Mic / Audio
-          </div>
-          <div class="chip-option" data-category="AC / Suhu Ruang">
-            <span>❄️</span> AC Ruangan
-          </div>
-          <div class="chip-option" data-category="Internet / Wi-Fi">
-            <span>🌐</span> Internet / Wi-Fi
-          </div>
-          <div class="chip-option" data-category="Listrik / Stop Kontak">
-            <span>🔌</span> Listrik / Pointer
-          </div>
-        </div>
-
-        <!-- Notes -->
-        <div class="form-group" style="margin-top: 12px;">
-          <input type="text" id="inputNotes" class="form-control" placeholder="Catatan singkat kendala (opsional)..." maxlength="120">
-        </div>
-      </div>
-
       <!-- Privacy Notice -->
-      <div style="font-size: 0.75rem; color: #64748B; margin-top: 16px;">
-        🔒 Notifikasi langsung terkirim ke WhatsApp Tim Support SBM ITB.
+      <div style="font-size: 0.78rem; color: #64748B; margin-top: 18px; line-height: 1.4;">
+        🔒 Notifikasi langsung diteruskan ke WhatsApp & Telegram Tim Support SBM ITB Jakarta.
+      </div>
+    </div>
+
+    <!-- Category Selection & Wi-Fi Verification Modal -->
+    <div class="modal-backdrop" id="categoryModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3><span>🚨</span> Pilih Jenis Kendala</h3>
+          <button class="modal-close-btn" id="btnModalClose" type="button" title="Tutup">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Wi-Fi Warning in Modal -->
+          <div class="modal-wifi-warning">
+            <div class="warning-icon">⚠️</div>
+            <div>
+              <strong>Peringatan Akses Wi-Fi:</strong>
+              <div>Layanan bantuan ini hanya berlaku bagi pengguna yang berada di ruang kelas dan tersambung ke <strong>ITB Hot Spot</strong> atau <strong>ITB Guest</strong>.</div>
+            </div>
+          </div>
+
+          <p style="font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 10px;">
+            Pilih kendala teknis yang dihadapi di ruang <span id="modalRoomName" style="color: var(--primary); font-weight: 800;">-</span>:
+          </p>
+
+          <!-- 5 Requested Options -->
+          <div class="modal-options-list" id="modalOptionsList">
+            <button class="modal-option-btn selected" type="button" data-category="Connect Smart Board/Projector">
+              <span class="opt-num">1</span>
+              <span class="opt-icon">🖥️</span>
+              <span>Connect Smart Board/Projector</span>
+            </button>
+
+            <button class="modal-option-btn" type="button" data-category="Mic/Audio">
+              <span class="opt-num">2</span>
+              <span class="opt-icon">🎤</span>
+              <span>Mic/Audio</span>
+            </button>
+
+            <button class="modal-option-btn" type="button" data-category="AC Ruangan">
+              <span class="opt-num">3</span>
+              <span class="opt-icon">❄️</span>
+              <span>AC Ruangan</span>
+            </button>
+
+            <button class="modal-option-btn" type="button" data-category="Pointer">
+              <span class="opt-num">4</span>
+              <span class="opt-icon">🎯</span>
+              <span>Pointer</span>
+            </button>
+
+            <button class="modal-option-btn" type="button" data-category="Lainnya">
+              <span class="opt-num">5</span>
+              <span class="opt-icon">📝</span>
+              <span>Lainnya (dapat diisi manual)</span>
+            </button>
+          </div>
+
+          <!-- Manual Notes Input -->
+          <div class="custom-input-group" id="manualInputGroup">
+            <label for="inputCustomNotes" style="font-size: 0.85rem; font-weight: 700; color: #1E293B; display: block; margin-bottom: 4px;">
+              Jelaskan kendala lainnya: <span style="color: #DC2626;">*</span>
+            </label>
+            <input type="text" id="inputCustomNotes" class="form-control" placeholder="Contoh: Stop kontak mati, kabel HDMI rusak..." maxlength="120">
+          </div>
+
+          <!-- Optional Additional Notes for Options 1-4 -->
+          <div id="optionalNoteGroup" style="margin-bottom: 14px;">
+            <input type="text" id="inputOptionalNotes" class="form-control" style="font-size: 0.85rem;" placeholder="Catatan tambahan (opsional)..." maxlength="120">
+          </div>
+
+          <!-- Wi-Fi Confirmation Checkbox -->
+          <label class="wifi-checkbox-group" for="checkWifiConfirm">
+            <input type="checkbox" id="checkWifiConfirm" checked>
+            <span>Saya mengonfirmasi terhubung ke <strong>ITB Hot Spot</strong> / <strong>ITB Guest</strong>.</span>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" id="btnCancelModal" type="button">Batal</button>
+          <button class="btn btn-call-emergency" id="btnConfirmSend" type="button" style="padding: 12px 18px; font-size: 1rem; width: auto;">
+            <span>🚨 Kirim Panggilan</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -312,7 +559,7 @@
       <div class="live-status-card state-menunggu" id="liveStatusCard">
         <div class="status-emoji" id="statusEmoji">🟡</div>
         <div class="status-title" id="statusTitle">Menunggu Support...</div>
-        <div class="status-desc" id="statusDesc">Panggilan telah terkirim ke WhatsApp staf. Menunggu staf mengambil penanganan.</div>
+        <div class="status-desc" id="statusDesc">Panggilan telah terkirim ke WhatsApp & Telegram staf. Menunggu staf mengambil penanganan.</div>
       </div>
 
       <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">

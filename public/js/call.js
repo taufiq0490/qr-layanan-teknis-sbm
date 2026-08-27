@@ -16,27 +16,43 @@ document.addEventListener('DOMContentLoaded', () => {
   const trackingRoomName = document.getElementById('trackingRoomName');
   const trackingTicketId = document.getElementById('trackingTicketId');
   const btnCallNow = document.getElementById('btnCallNow');
-  const categoryChips = document.querySelectorAll('.chip-option');
-  const inputNotes = document.getElementById('inputNotes');
   const callCard = document.getElementById('callCard');
   const trackingBox = document.getElementById('trackingBox');
   const btnCallAgain = document.getElementById('btnCallAgain');
 
+  // Modal Elements
+  const categoryModal = document.getElementById('categoryModal');
+  const btnModalClose = document.getElementById('btnModalClose');
+  const btnCancelModal = document.getElementById('btnCancelModal');
+  const btnConfirmSend = document.getElementById('btnConfirmSend');
+  const modalRoomName = document.getElementById('modalRoomName');
+  const modalOptionBtns = document.querySelectorAll('.modal-option-btn');
+  const manualInputGroup = document.getElementById('manualInputGroup');
+  const inputCustomNotes = document.getElementById('inputCustomNotes');
+  const optionalNoteGroup = document.getElementById('optionalNoteGroup');
+  const inputOptionalNotes = document.getElementById('inputOptionalNotes');
+  const checkWifiConfirm = document.getElementById('checkWifiConfirm');
+
+  // Tracking View Elements
   const step1 = document.getElementById('step1');
   const step2 = document.getElementById('step2');
   const step3 = document.getElementById('step3');
-
   const liveStatusCard = document.getElementById('liveStatusCard');
   const statusEmoji = document.getElementById('statusEmoji');
   const statusTitle = document.getElementById('statusTitle');
   const statusDesc = document.getElementById('statusDesc');
 
-  let selectedCategory = 'Umum';
+  const rateLimitText = document.getElementById('rateLimitText');
+  const rateLimitBadge = document.getElementById('rateLimitBadge');
+
+  let selectedCategory = 'Connect Smart Board/Projector';
   let activeTicketId = null;
   let pollInterval = null;
 
-  const rateLimitText = document.getElementById('rateLimitText');
-  const rateLimitBadge = document.getElementById('rateLimitBadge');
+  // Set room name display safely
+  displayRoomName.textContent = roomParam;
+  if (modalRoomName) modalRoomName.textContent = roomParam;
+  if (trackingRoomName) trackingRoomName.textContent = roomParam;
 
   // Load and display remaining quota
   async function updateQuotaDisplay() {
@@ -63,31 +79,94 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   updateQuotaDisplay();
-  const quotaInterval = setInterval(updateQuotaDisplay, 5000);
+  setInterval(updateQuotaDisplay, 5000);
 
-  // Set room name display safely
-  displayRoomName.textContent = roomParam;
-  if (trackingRoomName) trackingRoomName.textContent = roomParam;
+  // Open Modal on "PANGGIL BANTUAN SEGERA" Click
+  btnCallNow.addEventListener('click', () => {
+    openModal();
+  });
 
-  // Category selection handler
-  categoryChips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      categoryChips.forEach(c => c.classList.remove('selected'));
-      chip.classList.add('selected');
-      selectedCategory = chip.getAttribute('data-category');
+  function openModal() {
+    categoryModal.style.display = 'flex';
+    // Default focus/check
+    if (selectedCategory === 'Lainnya') {
+      setTimeout(() => inputCustomNotes && inputCustomNotes.focus(), 150);
+    }
+  }
+
+  function closeModal() {
+    categoryModal.style.display = 'none';
+    resetModalButton();
+  }
+
+  btnModalClose.addEventListener('click', closeModal);
+  btnCancelModal.addEventListener('click', closeModal);
+
+  // Close modal when clicking backdrop outside card
+  categoryModal.addEventListener('click', (e) => {
+    if (e.target === categoryModal) {
+      closeModal();
+    }
+  });
+
+  // Modal Category selection handler
+  modalOptionBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modalOptionBtns.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedCategory = btn.getAttribute('data-category');
+
+      if (selectedCategory === 'Lainnya') {
+        manualInputGroup.style.display = 'block';
+        optionalNoteGroup.style.display = 'none';
+        inputCustomNotes.focus();
+      } else {
+        manualInputGroup.style.display = 'none';
+        optionalNoteGroup.style.display = 'block';
+      }
     });
   });
 
-  // Call Button Click
-  btnCallNow.addEventListener('click', async () => {
+  // Reset modal submit button
+  function resetModalButton() {
+    btnConfirmSend.disabled = false;
+    btnConfirmSend.innerHTML = '<span>🚨 Kirim Panggilan</span>';
+  }
+
+  // Confirm and Send Call Button Click
+  btnConfirmSend.addEventListener('click', async () => {
+    // 1. Validate Wi-Fi confirmation
+    if (checkWifiConfirm && !checkWifiConfirm.checked) {
+      alert('⚠️ Peringatan Jaringan Kampus:\n\nPanggilan bantuan hanya dapat diproses apabila Anda terhubung ke jaringan Wi-Fi ITB Hot Spot atau ITB Guest.');
+      checkWifiConfirm.focus();
+      return;
+    }
+
+    // 2. Validate manual notes if "Lainnya" is selected
+    let finalCategory = selectedCategory;
+    let finalNotes = '';
+
+    if (selectedCategory === 'Lainnya') {
+      const customText = inputCustomNotes ? inputCustomNotes.value.trim() : '';
+      if (!customText) {
+        alert('Mohon tuliskan penjelasan kendala Anda pada kolom yang telah disediakan.');
+        inputCustomNotes.focus();
+        return;
+      }
+      finalCategory = 'Lainnya';
+      finalNotes = customText;
+    } else {
+      finalNotes = inputOptionalNotes ? inputOptionalNotes.value.trim() : '';
+    }
+
     // Disable button & show spinner
-    btnCallNow.disabled = true;
-    btnCallNow.innerHTML = '<span class="spinner"></span> <span>Mengirim Notifikasi...</span>';
+    btnConfirmSend.disabled = true;
+    btnConfirmSend.innerHTML = '<span class="spinner"></span> <span>Mengirim Notifikasi...</span>';
 
     const payload = {
       room: roomParam,
-      category: selectedCategory,
-      notes: inputNotes.value ? inputNotes.value.trim() : ''
+      category: finalCategory,
+      notes: finalNotes
     };
 
     try {
@@ -102,24 +181,25 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response.status === 429) {
         alert('⏱️ ' + (data.error || 'Batas panggilan tercapai. Mohon tunggu sejenak.'));
         updateQuotaDisplay();
-        resetButton();
+        resetModalButton();
         return;
       }
 
       if (data.success && data.ticket) {
         activeTicketId = data.ticket.id;
         updateQuotaDisplay();
+        closeModal();
         showTrackingView(data.ticket);
       } else {
         alert('Gagal mengirim panggilan: ' + (data.error || 'Terjadi kesalahan'));
         updateQuotaDisplay();
-        resetButton();
+        resetModalButton();
       }
     } catch (err) {
       console.error('Call error:', err);
-      alert('Koneksi bermasalah. Pastikan jaringan internet/Wi-Fi Anda aktif.');
+      alert('Koneksi bermasalah. Pastikan perangkat Anda terhubung ke jaringan Wi-Fi ITB Hot Spot atau ITB Guest.');
       updateQuotaDisplay();
-      resetButton();
+      resetModalButton();
     }
   });
 
@@ -215,19 +295,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function resetButton() {
-    btnCallNow.disabled = false;
-    btnCallNow.innerHTML = '<span>🚨 PANGGIL BANTUAN SEGERA</span>';
-  }
-
   // Call again button
   btnCallAgain.addEventListener('click', () => {
     if (pollInterval) clearInterval(pollInterval);
     activeTicketId = null;
     trackingBox.style.display = 'none';
     callCard.style.display = 'block';
-    resetButton();
-    inputNotes.value = '';
+    if (inputCustomNotes) inputCustomNotes.value = '';
+    if (inputOptionalNotes) inputOptionalNotes.value = '';
   });
 });
 
