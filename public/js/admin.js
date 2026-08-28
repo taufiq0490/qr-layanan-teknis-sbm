@@ -339,6 +339,18 @@ function setupRealtimeEvents() {
       knownTicketIds = new Set();
       saveCachedTickets([]);
       saveStoredKnownTicketIds(knownTicketIds);
+      if (window.SoundNotifier) {
+        window.SoundNotifier.stopContinuousAlert();
+        if (typeof window.SoundNotifier.stopTitleBlink === 'function') {
+          window.SoundNotifier.stopTitleBlink();
+        }
+      }
+      document.getElementById('statMenunggu').textContent = '0';
+      document.getElementById('statDiproses').textContent = '0';
+      document.getElementById('statSelesai').textContent = '0';
+      document.getElementById('statTotal').textContent = '0';
+      lastRenderedKey = '';
+      renderTable([]);
       loadTickets();
     });
   } catch (e) {
@@ -396,46 +408,6 @@ function triggerNewCallAlert(ticket, waitingCount) {
   window.SoundNotifier.startTitleBlink(`🚨 (${waitingCount}) Panggilan Ruang ${ticket.room}`);
 }
 
-// Smart Ticket Reconciliation
-function reconcileTickets(serverTickets) {
-  let localTickets = latestLoadedTickets.length > 0 ? latestLoadedTickets : getCachedTickets();
-  const ticketMap = new Map();
-
-  // 1. Masukkan tiket lokal terlebih dahulu
-  for (const t of localTickets) {
-    if (t && t.id) ticketMap.set(t.id, t);
-  }
-
-  const newlyArrivedTickets = [];
-
-  // 2. Gabungkan dengan data dari server
-  if (Array.isArray(serverTickets)) {
-    for (const st of serverTickets) {
-      if (!st || !st.id) continue;
-      if (!ticketMap.has(st.id)) {
-        ticketMap.set(st.id, st);
-        if (st.status === 'Menunggu' && !knownTicketIds.has(st.id)) {
-          newlyArrivedTickets.push(st);
-        }
-      } else {
-        const existing = ticketMap.get(st.id);
-        const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
-        const serverTime = new Date(st.updatedAt || st.createdAt || 0).getTime();
-        if (serverTime >= existingTime) {
-          ticketMap.set(st.id, { ...existing, ...st });
-        }
-      }
-    }
-  }
-
-  // 3. Urutkan kembali berdasarkan waktu dibuat (terbaru di atas)
-  const merged = Array.from(ticketMap.values()).sort((a, b) => {
-    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-  });
-
-  return { merged, newlyArrivedTickets };
-}
-
 let latestTicketRequestSeq = 0;
 
 async function loadTickets() {
@@ -458,9 +430,17 @@ async function loadTickets() {
 
     if (!data.success || !Array.isArray(data.tickets)) return;
 
-    // Smart Reconciliation
-    const { merged, newlyArrivedTickets } = reconcileTickets(data.tickets);
-    latestLoadedTickets = merged;
+    const serverTickets = data.tickets;
+    const newlyArrivedTickets = [];
+
+    // Check for newly arrived tickets (status 'Menunggu' not previously seen)
+    for (const st of serverTickets) {
+      if (st && st.id && st.status === 'Menunggu' && !knownTicketIds.has(st.id)) {
+        newlyArrivedTickets.push(st);
+      }
+    }
+
+    latestLoadedTickets = serverTickets;
     saveCachedTickets(latestLoadedTickets);
 
     const waitingTickets = latestLoadedTickets.filter(t => t.status === 'Menunggu');
@@ -478,7 +458,7 @@ async function loadTickets() {
     }
 
     // Pastikan semua tiket aktif tersimpan di set ID
-    latestLoadedTickets.forEach(t => knownTicketIds.add(t.id));
+    knownTicketIds = new Set(latestLoadedTickets.map(t => t.id));
     saveStoredKnownTicketIds(knownTicketIds);
     previousTicketCount = waitingCount;
 
@@ -845,8 +825,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = await res.json();
             if (data.success) {
+              latestLoadedTickets = [];
+              knownTicketIds = new Set();
+              saveCachedTickets([]);
+              saveStoredKnownTicketIds(knownTicketIds);
+              if (window.SoundNotifier) {
+                window.SoundNotifier.stopContinuousAlert();
+                if (typeof window.SoundNotifier.stopTitleBlink === 'function') {
+                  window.SoundNotifier.stopTitleBlink();
+                }
+              }
+              document.getElementById('statMenunggu').textContent = '0';
+              document.getElementById('statDiproses').textContent = '0';
+              document.getElementById('statSelesai').textContent = '0';
+              document.getElementById('statTotal').textContent = '0';
+              lastRenderedKey = '';
+              renderTable([]);
               alert('✅ Seluruh riwayat tiket berhasil dikosongkan.');
-              loadTickets();
+              await loadTickets();
             } else {
               alert('Gagal mengosongkan tiket: ' + data.error);
             }

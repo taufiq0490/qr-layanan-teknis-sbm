@@ -203,41 +203,32 @@ function saveCachedTickets(tickets) {
   } catch (e) {}
 }
 
-function reconcileTickets(serverTickets) {
-  let localTickets = getCachedTickets();
-  const ticketMap = new Map();
-
-  // 1. Masukkan tiket lokal terlebih dahulu
-  for (const t of localTickets) {
-    if (t && t.id) ticketMap.set(t.id, t);
+// SSE Real-time Events Listener for Reports
+function setupRealtimeReportsEvents() {
+  if (!window.EventSource) return;
+  try {
+    const es = new EventSource('/api/events');
+    es.addEventListener('tickets_cleared', () => {
+      allTickets = [];
+      saveCachedTickets([]);
+      populateCategories();
+      applyFilters();
+    });
+    es.addEventListener('ticket_updated', () => {
+      loadTickets();
+    });
+    es.addEventListener('new_ticket', () => {
+      loadTickets();
+    });
+  } catch (e) {
+    console.warn('Realtime SSE error on reports:', e);
   }
-
-  // 2. Gabungkan dengan data dari server
-  if (Array.isArray(serverTickets)) {
-    for (const st of serverTickets) {
-      if (!st || !st.id) continue;
-      if (!ticketMap.has(st.id)) {
-        ticketMap.set(st.id, st);
-      } else {
-        const existing = ticketMap.get(st.id);
-        const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
-        const serverTime = new Date(st.updatedAt || st.createdAt || 0).getTime();
-        if (serverTime >= existingTime) {
-          ticketMap.set(st.id, { ...existing, ...st });
-        }
-      }
-    }
-  }
-
-  // 3. Urutkan kembali berdasarkan waktu dibuat (terbaru di atas)
-  return Array.from(ticketMap.values()).sort((a, b) => {
-    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-  });
 }
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
+  setupRealtimeReportsEvents();
   fetch('/api/admin/check-auth', { headers: getAuthHeaders() })
     .then(r => r.json())
     .then(d => {
@@ -272,6 +263,7 @@ function setupEventListeners() {
   const btnResetFilter = document.getElementById('btnResetFilter');
   const btnExportExcel = document.getElementById('btnExportExcel');
   const btnExportPDF = document.getElementById('btnExportPDF');
+  const btnClearReports = document.getElementById('btnClearTicketsReports');
 
   if (startDate) {
     startDate.addEventListener('change', () => {
@@ -292,6 +284,45 @@ function setupEventListeners() {
   if (btnResetFilter) btnResetFilter.addEventListener('click', resetFilters);
   if (btnExportExcel) btnExportExcel.addEventListener('click', exportToExcel);
   if (btnExportPDF) btnExportPDF.addEventListener('click', exportToPDF);
+
+  if (btnClearReports) {
+    btnClearReports.addEventListener('click', () => {
+      window.ensureSuperAdmin({
+        title: 'Konfirmasi Kosongkan Seluruh Riwayat Tiket',
+        desc: 'Tindakan ini akan MENGHAPUS SEMUA DATA riwayat penanganan tiket secara permanen. Masukkan kata sandi Super Admin untuk menyetujui.',
+        onSuccess: async () => {
+          try {
+            const res = await fetch('/api/admin/clear-tickets', {
+              method: 'POST',
+              headers: getAuthHeaders()
+            });
+            if (res.status === 401) {
+              window.location.href = '/login';
+              return;
+            }
+            if (res.status === 403) {
+              alert('Akses ditolak. Memerlukan kata sandi Super Admin.');
+              return;
+            }
+            const data = await res.json();
+            if (data.success) {
+              allTickets = [];
+              saveCachedTickets([]);
+              populateCategories();
+              applyFilters();
+              alert('✅ Seluruh riwayat tiket berhasil dikosongkan.');
+              await loadTickets();
+            } else {
+              alert('Gagal mengosongkan riwayat: ' + (data.error || 'Terjadi kesalahan'));
+            }
+          } catch (e) {
+            console.error(e);
+            alert('Terjadi kesalahan saat mengosongkan riwayat tiket.');
+          }
+        }
+      });
+    });
+  }
 }
 
 function clearActivePreset() {
@@ -320,7 +351,7 @@ async function loadRooms() {
 async function loadTickets() {
   // First load from local cache so reports immediately populate
   const cached = getCachedTickets();
-  if (cached.length > 0) {
+  if (cached.length > 0 && allTickets.length === 0) {
     allTickets = cached;
     populateCategories();
     applyFilters();
@@ -337,7 +368,7 @@ async function loadTickets() {
     }
     const data = await res.json();
     if (data.success && Array.isArray(data.tickets)) {
-      allTickets = reconcileTickets(data.tickets);
+      allTickets = data.tickets;
       saveCachedTickets(allTickets);
 
       // Populate Category filter options from real data

@@ -772,6 +772,7 @@ app.patch('/api/tickets/:id/status', requireAdminAuthAPI, async (req, res) => {
 app.post('/api/admin/clear-tickets', requireSuperAdminAuthAPI, async (req, res) => {
   try {
     await clearAllTicketsAsync();
+    callHistory.clear();
     broadcastRealtimeEvent('tickets_cleared', {});
     res.json({ success: true, message: 'Seluruh riwayat tiket berhasil dikosongkan.' });
   } catch (err) {
