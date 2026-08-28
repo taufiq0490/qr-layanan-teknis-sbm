@@ -247,6 +247,27 @@ function updateAudioControlsUI() {
   if (alarmInd) {
     alarmInd.style.display = sn.isLooping ? 'inline-block' : 'none';
   }
+
+  // Update Status Tombol Notifikasi Desktop
+  const btnDesktop = document.getElementById('btnDesktopNotif');
+  if (btnDesktop && typeof sn.getNotificationPermissionStatus === 'function') {
+    const notifStatus = sn.getNotificationPermissionStatus();
+    if (notifStatus === 'granted') {
+      btnDesktop.className = 'btn-audio-action active';
+      btnDesktop.innerHTML = '<span>🔔 Notif: AKTIF</span>';
+      btnDesktop.title = 'Notifikasi Desktop OS Windows Aktif. Klik untuk uji coba pop-up & suara.';
+    } else if (notifStatus === 'denied') {
+      btnDesktop.className = 'btn-audio-action';
+      btnDesktop.style.borderColor = '#EF4444';
+      btnDesktop.style.color = '#FCA5A5';
+      btnDesktop.innerHTML = '<span>🔕 Notif: DIBLOKIR</span>';
+      btnDesktop.title = 'Notifikasi diblokir pada browser. Klik untuk panduan membuka izin.';
+    } else {
+      btnDesktop.className = 'btn-audio-action';
+      btnDesktop.innerHTML = '<span>🔔 Aktifkan Notif</span>';
+      btnDesktop.title = 'Klik untuk mengaktifkan notifikasi pop-up desktop Windows.';
+    }
+  }
 }
 
 async function handleLogout() {
@@ -358,10 +379,17 @@ function triggerNewCallAlert(ticket, waitingCount) {
     }, 1200);
   }
 
-  // 3. Notifikasi Desktop OS
+  // 3. Notifikasi Desktop OS Windows / Browser
+  const safeRoom = ticket.room || 'Kelas';
+  const safeCategory = ticket.category || 'Dukungan Teknis';
+  const safeNotes = ticket.notes ? `\nCatatan: ${ticket.notes}` : '';
   window.SoundNotifier.showDesktopNotification(
-    `🚨 Panggilan Baru: Ruang ${ticket.room}`,
-    `Kendala: ${ticket.category || 'Dukungan Teknis'}\nCatatan: ${ticket.notes || '-'}`
+    `🚨 Panggilan Masuk: Ruang ${safeRoom}`,
+    `Kendala: ${safeCategory}${safeNotes}\nHarap segera menuju lokasi ruangan.`,
+    {
+      tag: `ticket-${ticket.id}`,
+      data: { ticketId: ticket.id, room: safeRoom }
+    }
   );
 
   // 4. Tab Title Blink
@@ -752,13 +780,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnDesktopNotif) {
     btnDesktopNotif.addEventListener('click', async () => {
       if (window.SoundNotifier) {
-        const granted = await window.SoundNotifier.requestNotificationPermission();
-        if (granted) {
-          alert('✅ Notifikasi Desktop Aktif!\nAnda akan menerima pemberitahuan otomatis saat ada panggilan kelas baru.');
-          window.SoundNotifier.showDesktopNotification('🔔 Notifikasi Aktif', 'SBM ITB Layanan Teknis siap mengirimkan notifikasi panggilan.');
-        } else {
-          alert('⚠️ Izin notifikasi belum diberikan pada browser Anda. Silakan klik ikon gembok di sebelah alamat web browser untuk mengizinkan notifikasi.');
-        }
+        await window.SoundNotifier.testDesktopNotification();
+        updateAudioControlsUI();
       }
     });
   }

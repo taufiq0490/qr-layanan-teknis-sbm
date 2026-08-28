@@ -17,9 +17,26 @@ class SoundNotifierEngine {
     // Desktop notification tracking
     this.originalTitle = document.title;
     this.titleBlinkInterval = null;
+    this.swRegistration = null;
+
+    // Inisialisasi Service Worker untuk background Web Desktop Notifications
+    this.initServiceWorker();
 
     // Setup auto-unlock on first user interaction
     this.initAutoUnlock();
+  }
+
+  // Inisialisasi Service Worker
+  initServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => {
+          this.swRegistration = reg;
+        })
+        .catch((err) => {
+          console.warn('Service worker registration note:', err);
+        });
+    }
   }
 
   // Inisialisasi AudioContext dengan aman
@@ -442,7 +459,13 @@ class SoundNotifierEngine {
      NOTIFIKASI DESKTOP & JUDUL TAB BERKEDIP
      ========================================================== */
 
-  // Minta Izin Notifikasi Desktop
+  // Cek Status Izin Notifikasi Desktop
+  getNotificationPermissionStatus() {
+    if (!('Notification' in window)) return 'unsupported';
+    return Notification.permission; // 'granted', 'denied', or 'default'
+  }
+
+  // Minta Izin Notifikasi Desktop (Kompatibel dengan semua browser modern & lawas)
   async requestNotificationPermission() {
     if (!('Notification' in window)) {
       alert('Browser Anda tidak mendukung Web Desktop Notification.');
@@ -451,27 +474,111 @@ class SoundNotifierEngine {
     if (Notification.permission === 'granted') {
       return true;
     }
-    const perm = await Notification.requestPermission();
-    return perm === 'granted';
+    if (Notification.permission === 'denied') {
+      return false;
+    }
+
+    try {
+      let result;
+      // Mendukung Promise dan Callback versi Safari / WebKit lama
+      const permissionPromise = Notification.requestPermission((status) => {
+        if (status) result = status;
+      });
+      if (permissionPromise && typeof permissionPromise.then === 'function') {
+        result = await permissionPromise;
+      }
+      return result === 'granted' || Notification.permission === 'granted';
+    } catch (e) {
+      console.warn('requestPermission error:', e);
+      return Notification.permission === 'granted';
+    }
   }
 
-  // Tampilkan Notifikasi Desktop Browser
-  showDesktopNotification(title, body) {
-    if ('Notification' in window && Notification.permission === 'granted') {
+  // Tampilkan Notifikasi Desktop Browser / Windows Action Center
+  async showDesktopNotification(title, body, customOptions = {}) {
+    if (!('Notification' in window)) return;
+
+    // Jika status masih default dan user sedang berinteraksi, minta izin secara otomatis
+    if (Notification.permission === 'default') {
       try {
-        const notif = new Notification(title, {
-          body: body,
-          icon: '/favicon.ico',
-          tag: 'sbm-ticket-alert',
-          requireInteraction: true
-        });
-        notif.onclick = () => {
-          window.focus();
-          notif.close();
-        };
-      } catch (e) {
-        console.warn('Desktop notification error:', e);
+        await this.requestNotificationPermission();
+      } catch (e) {}
+    }
+
+    if (Notification.permission !== 'granted') {
+      return;
+    }
+
+    const iconUrl = window.location.origin + '/images/logo-sbm-itb.png';
+    const notifOptions = {
+      body: body || '',
+      icon: iconUrl,
+      badge: iconUrl,
+      tag: customOptions.tag || 'sbm-ticket-alert',
+      renotify: true,
+      requireInteraction: true, // Notifikasi tetap ada di layar sampai staf merespons
+      silent: false,
+      vibrate: [300, 100, 300, 100, 300],
+      data: {
+        url: window.location.origin + '/admin',
+        timestamp: Date.now(),
+        ...(customOptions.data || {})
+      },
+      ...customOptions
+    };
+
+    // 1. Prioritaskan Service Worker showNotification (Paling andal di background OS Windows)
+    try {
+      if (this.swRegistration && this.swRegistration.showNotification) {
+        await this.swRegistration.showNotification(title, notifOptions);
+        return;
+      } else if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+        const reg = await navigator.serviceWorker.ready;
+        if (reg && reg.showNotification) {
+          await reg.showNotification(title, notifOptions);
+          return;
+        }
       }
+    } catch (swErr) {
+      console.warn('SW notification fallback note:', swErr);
+    }
+
+    // 2. Fallback ke standard Notification constructor
+    try {
+      const notif = new Notification(title, notifOptions);
+      notif.onclick = (event) => {
+        event.preventDefault();
+        window.focus();
+        if (window.parent) window.parent.focus();
+        notif.close();
+      };
+    } catch (e) {
+      console.warn('Desktop notification error:', e);
+    }
+  }
+
+  // Uji Coba Notifikasi Desktop OS Langsung
+  async testDesktopNotification() {
+    const status = this.getNotificationPermissionStatus();
+    if (status === 'unsupported') {
+      alert('⚠️ Browser Anda tidak mendukung Web Desktop Notification.');
+      return;
+    }
+    if (status === 'denied') {
+      alert('⚠️ Izin Notifikasi Desktop Diblokir oleh Browser.\n\nCara Mengaktifkan:\n1. Klik ikon Gembok / Pengaturan di sebelah kiri URL browser (' + window.location.host + ').\n2. Cari menu "Notifications" / "Notifikasi", lalu ubah menjadi "Allow" / "Izinkan".\n3. Refresh dashboard.');
+      return;
+    }
+
+    const granted = await this.requestNotificationPermission();
+    if (granted) {
+      this.showDesktopNotification(
+        '🔔 Uji Coba: Notifikasi Desktop SBM ITB',
+        'Notifikasi pop-up desktop komputer Anda telah AKTIF dan berfungsi sempurna.',
+        { tag: 'sbm-test-alert' }
+      );
+      this.playIncomingCallSound();
+    } else {
+      alert('⚠️ Izin notifikasi belum diberikan pada browser.');
     }
   }
 
