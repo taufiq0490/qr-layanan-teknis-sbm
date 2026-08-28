@@ -182,6 +182,59 @@ const SBM_COLORS = [
   '#06B6D4', '#84CC16', '#64748B'
 ];
 
+const SBM_CACHE_KEY = 'sbm_tickets_cache';
+
+function getCachedTickets() {
+  try {
+    const raw = localStorage.getItem(SBM_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveCachedTickets(tickets) {
+  try {
+    if (Array.isArray(tickets)) {
+      localStorage.setItem(SBM_CACHE_KEY, JSON.stringify(tickets));
+    }
+  } catch (e) {}
+}
+
+function reconcileTickets(serverTickets) {
+  let localTickets = getCachedTickets();
+  const ticketMap = new Map();
+
+  // 1. Masukkan tiket lokal terlebih dahulu
+  for (const t of localTickets) {
+    if (t && t.id) ticketMap.set(t.id, t);
+  }
+
+  // 2. Gabungkan dengan data dari server
+  if (Array.isArray(serverTickets)) {
+    for (const st of serverTickets) {
+      if (!st || !st.id) continue;
+      if (!ticketMap.has(st.id)) {
+        ticketMap.set(st.id, st);
+      } else {
+        const existing = ticketMap.get(st.id);
+        const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+        const serverTime = new Date(st.updatedAt || st.createdAt || 0).getTime();
+        if (serverTime >= existingTime) {
+          ticketMap.set(st.id, { ...existing, ...st });
+        }
+      }
+    }
+  }
+
+  // 3. Urutkan kembali berdasarkan waktu dibuat (terbaru di atas)
+  return Array.from(ticketMap.values()).sort((a, b) => {
+    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+  });
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
@@ -265,8 +318,17 @@ async function loadRooms() {
 
 // 3. Fetch Tickets
 async function loadTickets() {
+  // First load from local cache so reports immediately populate
+  const cached = getCachedTickets();
+  if (cached.length > 0) {
+    allTickets = cached;
+    populateCategories();
+    applyFilters();
+  }
+
   try {
-    const res = await fetch('/api/tickets', {
+    const res = await fetch('/api/tickets?_t=' + Date.now(), {
+      cache: 'no-store',
       headers: getAuthHeaders()
     });
     if (res.status === 401) {
@@ -275,28 +337,17 @@ async function loadTickets() {
     }
     const data = await res.json();
     if (data.success && Array.isArray(data.tickets)) {
-      allTickets = data.tickets;
+      allTickets = reconcileTickets(data.tickets);
+      saveCachedTickets(allTickets);
 
       // Populate Category filter options from real data
       populateCategories();
 
-      // Apply default filter (Semua)
+      // Apply filter
       applyFilters();
-    } else {
-      throw new Error(data.error || 'Format data tiket tidak sesuai.');
     }
   } catch (err) {
     console.error('Error loading tickets for reports:', err);
-    const tbody = document.getElementById('reportTableBody');
-    if (tbody) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="8" style="text-align: center; padding: 24px; color: var(--danger);">
-            Gagal memuat data laporan dari server: ${escapeHTML(err.message || 'Terjadi kesalahan sistem')}
-          </td>
-        </tr>
-      `;
-    }
   }
 }
 
