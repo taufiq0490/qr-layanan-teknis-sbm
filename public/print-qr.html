@@ -88,31 +88,33 @@
       box-shadow: 0 16px 36px rgba(15, 44, 89, 0.18);
     }
 
-    /* Top Red Alert Ribbon / High-Visibility Banner */
+    /* Top Red Alert Ribbon / High-Visibility Banner (DIPERBESAR) */
     .qr-top-highlight-badge {
       background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
       color: #FFFFFF;
       width: calc(100% + 40px);
-      margin: -24px -20px 16px -20px;
-      padding: 10px 16px;
-      font-size: 0.88rem;
-      font-weight: 800;
+      margin: -24px -20px 14px -20px;
+      padding: 12px 16px;
+      font-size: 1.18rem;
+      font-weight: 900;
       letter-spacing: 0.8px;
       text-transform: uppercase;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      box-shadow: 0 4px 10px rgba(220, 38, 38, 0.25);
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.28);
+      line-height: 1.25;
     }
 
     .qr-top-highlight-badge span.pulse-dot {
       display: inline-block;
-      width: 8px;
-      height: 8px;
+      width: 9px;
+      height: 9px;
       background: #FEF08A;
       border-radius: 50%;
       box-shadow: 0 0 6px #FEF08A;
+      flex-shrink: 0;
     }
 
     /* Brand Header */
@@ -149,30 +151,32 @@
       letter-spacing: 0.5px;
     }
 
-    /* Room Identification Tag (Ultra Prominent) */
+    /* Room Identification Tag (DIPERKECIL / COMPACT PILL) */
     .qr-room-banner {
       background: linear-gradient(135deg, #0F2C59 0%, #1A4D8F 100%);
       color: white;
-      width: 100%;
-      padding: 10px 14px;
-      border-radius: 12px;
-      margin: 12px 0 14px;
-      box-shadow: 0 4px 14px rgba(15, 44, 89, 0.25);
+      padding: 6px 18px;
+      border-radius: 20px;
+      margin: 8px 0 10px;
+      box-shadow: 0 3px 8px rgba(15, 44, 89, 0.2);
       border: 1.5px solid #DDA74F;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
     .qr-room-label {
       font-size: 0.72rem;
       font-weight: 700;
       color: #FDE047;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
     }
     .qr-room-name {
-      font-size: 1.45rem;
-      font-weight: 900;
+      font-size: 1.05rem;
+      font-weight: 800;
       letter-spacing: 0.5px;
       color: #FFFFFF;
-      margin-top: 2px;
     }
 
     /* QR Code Focus Viewfinder / Frame */

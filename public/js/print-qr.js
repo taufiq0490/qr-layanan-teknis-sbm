@@ -299,10 +299,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="qr-header-title">INSTITUT TEKNOLOGI BANDUNG</div>
         <div class="qr-header-campus">KAMPUS JAKARTA</div>
 
-        <!-- 3. ULTRA-PROMINENT ROOM BANNER -->
+        <!-- 3. COMPACT ROOM PILL (DIPERKECIL) -->
         <div class="qr-room-banner">
-          <div class="qr-room-label">📍 LOKASI KELAS</div>
-          <div class="qr-room-name">RUANG ${escapeHTML(room.toUpperCase())}</div>
+          <span style="font-size: 0.95rem;">📍</span>
+          <span class="qr-room-name">RUANG ${escapeHTML(room.toUpperCase())}</span>
         </div>
 
         <!-- 4. QR CODE VIEWFINDER / SCANNER FRAME -->
