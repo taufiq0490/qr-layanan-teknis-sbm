@@ -292,16 +292,46 @@ function showAudioUnlockModalIfRequired() {
   }
 }
 
-window.activateAudioSystem = async function() {
-  if (window.SoundNotifier) {
-    await window.SoundNotifier.unlockAudio();
-    await window.SoundNotifier.requestNotificationPermission();
-    window.SoundNotifier.testSound();
-  }
+window.closeAudioActivationModal = function() {
   const modal = document.getElementById('audioActivationModal');
-  if (modal) modal.style.display = 'none';
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('active');
+  }
+};
+
+window.activateAudioSystem = async function() {
+  // 1. Tutup modal seketika agar tidak menghalangi aktivitas layar
+  window.closeAudioActivationModal();
   const banner = document.getElementById('audioUnlockBanner');
   if (banner) banner.style.display = 'none';
+
+  // 2. Jalankan unlock audio dan request permission secara aman & non-blocking
+  if (window.SoundNotifier) {
+    try {
+      await window.SoundNotifier.unlockAudio();
+    } catch (e) {
+      console.warn('Audio unlock note:', e);
+    }
+
+    try {
+      window.SoundNotifier.testSound();
+    } catch (e) {
+      console.warn('Test sound note:', e);
+    }
+
+    // Request notification permission asynchronously tanpa menahan eksekusi (non-blocking)
+    try {
+      window.SoundNotifier.requestNotificationPermission().then(() => {
+        updateAudioControlsUI();
+      }).catch(e => {
+        console.warn('Notif permission note:', e);
+      });
+    } catch (e) {
+      console.warn('Notif request note:', e);
+    }
+  }
+
   updateAudioControlsUI();
 };
 
@@ -854,6 +884,22 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  // Audio Activation Modal backdrop and escape dismiss
+  const actModal = document.getElementById('audioActivationModal');
+  if (actModal) {
+    actModal.addEventListener('click', (e) => {
+      if (e.target === actModal) {
+        window.closeAudioActivationModal();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      window.closeAudioActivationModal();
+    }
+  });
 });
 
 // Fungsi Ekspor Excel dari Dashboard Admin
