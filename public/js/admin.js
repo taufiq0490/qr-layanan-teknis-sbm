@@ -571,6 +571,11 @@ function renderTable(tickets) {
   }
 
   tbody.innerHTML = tickets.map(ticket => {
+    const safeRoom = escapeHTML(ticket.room || '-');
+    const safeCategory = escapeHTML(ticket.category || 'Umum');
+    const safeNotes = escapeHTML(ticket.notes);
+    const safeHandledBy = escapeHTML(ticket.handledBy || '-');
+
     const dateObj = new Date(ticket.createdAt);
     const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
     const dateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
@@ -624,11 +629,6 @@ function renderTable(tickets) {
         </div>
       `;
     }
-
-    const safeRoom = escapeHTML(ticket.room);
-    const safeCategory = escapeHTML(ticket.category || 'Umum');
-    const safeNotes = escapeHTML(ticket.notes);
-    const safeHandledBy = escapeHTML(ticket.handledBy || '-');
 
     return `
       <tr>
