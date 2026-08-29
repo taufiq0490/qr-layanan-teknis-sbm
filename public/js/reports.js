@@ -816,7 +816,7 @@ function renderTable() {
   if (filteredTickets.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
+        <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-muted);">
           Tidak ada data tiket yang cocok dengan filter yang dipilih.
         </td>
       </tr>
@@ -877,10 +877,43 @@ function renderTable() {
             ${safeNotes || '-'}
           </span>
         </td>
+        <td class="no-print" style="text-align: center;">
+          <button class="btn-xs btn-outline-danger" onclick="confirmDeleteReportTicket('${t.id}', '${safeRoom}')" title="Hapus tiket ini (Perlu Password Super Admin)">
+            🗑️ Hapus
+          </button>
+        </td>
       </tr>
     `;
   }).join('');
 }
+
+// Handler Hapus Single Tiket dari Laporan
+window.confirmDeleteReportTicket = function(ticketId, roomName) {
+  window.requestSuperAdminAuth({
+    title: 'Otorisasi Hapus Riwayat Laporan',
+    desc: `Penghapusan data tiket Ruang ${roomName || ''} (ID: ${ticketId}) dilindungi. Masukkan kata sandi Super Admin untuk melanjutkan.`,
+    onSuccess: async () => {
+      try {
+        const res = await fetch(`/api/admin/tickets/${encodeURIComponent(ticketId)}/delete`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (data.success) {
+          allTickets = allTickets.filter(t => t.id !== ticketId);
+          filteredTickets = filteredTickets.filter(t => t.id !== ticketId);
+          applyFilters();
+        } else {
+          alert('Gagal menghapus tiket: ' + (data.error || 'Terjadi kesalahan'));
+        }
+      } catch (err) {
+        console.error('Error deleting ticket from report:', err);
+        alert('Terjadi kesalahan jaringan saat menghapus data tiket.');
+      }
+    }
+  });
+};
 
 // 9. Update Official Print Header Metadata
 function updatePrintHeaderInfo() {

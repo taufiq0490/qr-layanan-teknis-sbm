@@ -18,6 +18,8 @@ const {
   updateTicketWaStatus,
   updateTicketWaStatusAsync,
   appendTelegramMessagesAsync,
+  deleteTicket,
+  deleteTicketAsync,
   clearAllTickets,
   clearAllTicketsAsync,
   getStorageStatus,
@@ -778,6 +780,48 @@ app.post('/api/admin/clear-tickets', requireSuperAdminAuthAPI, async (req, res) 
   } catch (err) {
     console.error('Error clearing tickets:', err);
     res.status(500).json({ success: false, error: 'Gagal mengosongkan riwayat tiket.' });
+  }
+});
+
+// 5.2 Delete Single Ticket (Super Admin - Protected with Token or Direct Password)
+app.delete('/api/admin/tickets/:id', requireSuperAdminAuthAPI, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deleted = await deleteTicketAsync(id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan.' });
+    }
+    broadcastRealtimeEvent('ticket_deleted', { id, ticket: deleted });
+    res.json({ success: true, message: `Tiket ${id} berhasil dihapus.`, ticket: deleted });
+  } catch (err) {
+    console.error('Error deleting ticket:', err);
+    res.status(500).json({ success: false, error: 'Gagal menghapus tiket.' });
+  }
+});
+
+app.post('/api/admin/tickets/:id/delete', async (req, res) => {
+  const { id } = req.params;
+  const { password } = req.body;
+  const config = readConfig();
+  const validSuperPassword = (process.env.SUPER_ADMIN_PASSWORD || config.superAdminPassword || config.adminPassword || 'Bismillah.1').trim();
+  
+  const session = getAdminSessionPayload(req);
+  const isSuperAdminSession = session && session.role === 'superadmin';
+  
+  if (!isSuperAdminSession && (!password || password.trim() !== validSuperPassword)) {
+    return res.status(401).json({ success: false, error: 'Kata sandi Super Admin salah atau tidak memiliki otorisasi.' });
+  }
+
+  try {
+    const deleted = await deleteTicketAsync(id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan.' });
+    }
+    broadcastRealtimeEvent('ticket_deleted', { id, ticket: deleted });
+    res.json({ success: true, message: `Tiket ${id} berhasil dihapus.`, ticket: deleted });
+  } catch (err) {
+    console.error('Error deleting ticket:', err);
+    res.status(500).json({ success: false, error: 'Gagal menghapus tiket.' });
   }
 });
 

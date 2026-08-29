@@ -318,6 +318,47 @@ body {
   background-color: #F1F5F9;
 }
 
+.btn-outline-danger {
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-outline-danger:hover {
+  background: #DC2626;
+  color: #FFFFFF;
+  border-color: #DC2626;
+  transform: translateY(-1px);
+}
+
+.btn-xs {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.action-btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
 .btn-call-emergency {
   background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
   color: white;

@@ -1,1 +1,341 @@
-[]
+[
+  {
+    "id": "TICK-MTE1S0BS-342",
+    "room": "Henk Uno",
+    "category": "Connect Smart Board",
+    "notes": "",
+    "status": "Selesai",
+    "handledBy": "Bpk. Amir",
+    "createdAt": "2026-08-29T07:16:50.728Z",
+    "claimedAt": "2026-08-29T07:17:14.989Z",
+    "completedAt": "2026-08-29T07:17:23.436Z",
+    "resolutionTimeSeconds": 33,
+    "updatedAt": "2026-08-29T07:17:23.436Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "telegram",
+      "timestamp": "2026-08-29T07:16:51.439Z",
+      "details": {
+        "waResult": {
+          "success": false
+        },
+        "teleResult": {
+          "success": true,
+          "provider": "telegram",
+          "telegramMessages": [
+            {
+              "chatId": "-5411652328",
+              "messageId": 156
+            }
+          ],
+          "results": [
+            {
+              "chatId": "-5411652328",
+              "success": true,
+              "data": {
+                "ok": true,
+                "result": {
+                  "message_id": 156,
+                  "from": {
+                    "id": 8781937865,
+                    "is_bot": true,
+                    "first_name": "SBM ITB Support",
+                    "username": "SBMITB_Support_bot"
+                  },
+                  "chat": {
+                    "id": -5411652328,
+                    "title": "SBM ITB JKT",
+                    "type": "group",
+                    "all_members_are_administrators": false
+                  },
+                  "date": 1787987811,
+                  "text": "🚨 PANGGILAN BANTUAN TEKNIS SBM ITB\n\nMohon bantuan di ruang Henk Uno SEGERA!\n\n📌 Kendala: Connect Smart Board\n\n🕒 Waktu: 29 Agu 2026, 14.16 WIB\n🆔 ID Tiket: #BS-342",
+                  "entities": [
+                    {
+                      "offset": 3,
+                      "length": 32,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 60,
+                      "length": 8,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 81,
+                      "length": 8,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 114,
+                      "length": 6,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 147,
+                      "length": 9,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 157,
+                      "length": 7,
+                      "type": "code"
+                    }
+                  ],
+                  "reply_markup": {
+                    "inline_keyboard": [
+                      [
+                        {
+                          "text": "🚀 Klaim & Tangani Tiket",
+                          "url": "https://qr-layanan-teknis-sbm.vercel.app/claim?ticket=TICK-MTE1S0BS-342"
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "telegramMessages": [
+      {
+        "chatId": "-5411652328",
+        "messageId": 156
+      },
+      {
+        "chatId": "-5411652328",
+        "messageId": 157
+      }
+    ]
+  },
+  {
+    "id": "TICK-MTDSM1ML-27",
+    "room": "Kirana Megatara 2",
+    "category": "Umum",
+    "notes": "Wifi mati",
+    "status": "Selesai",
+    "handledBy": "Bpk. Amir",
+    "createdAt": "2026-08-29T03:00:15.933Z",
+    "claimedAt": "2026-08-29T03:07:09.090Z",
+    "completedAt": "2026-08-29T03:09:57.392Z",
+    "resolutionTimeSeconds": 581,
+    "updatedAt": "2026-08-29T03:09:57.392Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "telegram",
+      "timestamp": "2026-08-29T03:00:16.636Z",
+      "details": {
+        "waResult": {
+          "success": false
+        },
+        "teleResult": {
+          "success": true,
+          "provider": "telegram",
+          "telegramMessages": [
+            {
+              "chatId": "-5411652328",
+              "messageId": 152
+            }
+          ],
+          "results": [
+            {
+              "chatId": "-5411652328",
+              "success": true,
+              "data": {
+                "ok": true,
+                "result": {
+                  "message_id": 152,
+                  "from": {
+                    "id": 8781937865,
+                    "is_bot": true,
+                    "first_name": "SBM ITB Support",
+                    "username": "SBMITB_Support_bot"
+                  },
+                  "chat": {
+                    "id": -5411652328,
+                    "title": "SBM ITB JKT",
+                    "type": "group",
+                    "all_members_are_administrators": false
+                  },
+                  "date": 1787972416,
+                  "text": "🚨 PANGGILAN BANTUAN TEKNIS SBM ITB\n\nMohon bantuan di ruang Kirana Megatara 2 SEGERA!\n\n📌 Kendala: Umum\n📝 Catatan: Wifi mati\n\n🕒 Waktu: 29 Agu 2026, 10.00 WIB\n🆔 ID Tiket: #1ML-27",
+                  "entities": [
+                    {
+                      "offset": 3,
+                      "length": 32,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 60,
+                      "length": 17,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 90,
+                      "length": 8,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 107,
+                      "length": 8,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 116,
+                      "length": 9,
+                      "type": "italic"
+                    },
+                    {
+                      "offset": 130,
+                      "length": 6,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 163,
+                      "length": 9,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 173,
+                      "length": 7,
+                      "type": "code"
+                    }
+                  ],
+                  "reply_markup": {
+                    "inline_keyboard": [
+                      [
+                        {
+                          "text": "🚀 Klaim & Tangani Tiket",
+                          "url": "https://qr-layanan-teknis-sbm.vercel.app/claim?ticket=TICK-MTDSM1ML-27"
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "telegramMessages": [
+      {
+        "chatId": "-5411652328",
+        "messageId": 152
+      },
+      {
+        "chatId": "-5411652328",
+        "messageId": 153
+      }
+    ]
+  },
+  {
+    "id": "TICK-MTDO6I5R-777",
+    "room": "Henk Uno",
+    "category": "Connect Smart Board",
+    "notes": "",
+    "status": "Selesai",
+    "handledBy": "Bpk. Amir",
+    "createdAt": "2026-08-29T00:56:12.399Z",
+    "claimedAt": "2026-08-29T00:56:45.992Z",
+    "completedAt": "2026-08-29T00:58:12.918Z",
+    "resolutionTimeSeconds": 121,
+    "updatedAt": "2026-08-29T00:58:12.918Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "telegram",
+      "timestamp": "2026-08-29T00:56:13.163Z",
+      "details": {
+        "waResult": {
+          "success": false
+        },
+        "teleResult": {
+          "success": true,
+          "provider": "telegram",
+          "telegramMessages": [
+            {
+              "chatId": "-5411652328",
+              "messageId": 151
+            }
+          ],
+          "results": [
+            {
+              "chatId": "-5411652328",
+              "success": true,
+              "data": {
+                "ok": true,
+                "result": {
+                  "message_id": 151,
+                  "from": {
+                    "id": 8781937865,
+                    "is_bot": true,
+                    "first_name": "SBM ITB Support",
+                    "username": "SBMITB_Support_bot"
+                  },
+                  "chat": {
+                    "id": -5411652328,
+                    "title": "SBM ITB JKT",
+                    "type": "group",
+                    "all_members_are_administrators": false
+                  },
+                  "date": 1787964973,
+                  "text": "🚨 PANGGILAN BANTUAN TEKNIS SBM ITB\n\nMohon bantuan di ruang Henk Uno SEGERA!\n\n📌 Kendala: Connect Smart Board\n\n🕒 Waktu: 29 Agu 2026, 07.56 WIB\n🆔 ID Tiket: #5R-777",
+                  "entities": [
+                    {
+                      "offset": 3,
+                      "length": 32,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 60,
+                      "length": 8,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 81,
+                      "length": 8,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 114,
+                      "length": 6,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 147,
+                      "length": 9,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 157,
+                      "length": 7,
+                      "type": "code"
+                    }
+                  ],
+                  "reply_markup": {
+                    "inline_keyboard": [
+                      [
+                        {
+                          "text": "🚀 Klaim & Tangani Tiket",
+                          "url": "https://qr-layanan-teknis-sbm.vercel.app/claim?ticket=TICK-MTDO6I5R-777"
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "telegramMessages": [
+      {
+        "chatId": "-5411652328",
+        "messageId": 151
+      }
+    ]
+  }
+]

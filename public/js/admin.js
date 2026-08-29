@@ -364,6 +364,19 @@ function setupRealtimeEvents() {
       loadTickets();
     });
 
+    es.addEventListener('ticket_deleted', (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        if (payload && payload.id) {
+          latestLoadedTickets = latestLoadedTickets.filter(t => t.id !== payload.id);
+          knownTicketIds.delete(payload.id);
+          saveCachedTickets(latestLoadedTickets);
+          saveStoredKnownTicketIds(knownTicketIds);
+        }
+      } catch (err) {}
+      loadTickets();
+    });
+
     es.addEventListener('tickets_cleared', () => {
       latestLoadedTickets = [];
       knownTicketIds = new Set();
@@ -577,26 +590,37 @@ function renderTable(tickets) {
     if (ticket.status === 'Menunggu') {
       actionButtons = `
         <div class="action-btn-group">
-          <button class="btn-xs btn-primary" onclick="promptProcess('${ticket.id}')">
+          <button class="btn-xs btn-primary" onclick="promptProcess('${ticket.id}')" title="Tandai sedang diproses">
             🛠️ Proses
           </button>
-          <button class="btn-xs btn-success" onclick="updateStatus('${ticket.id}', 'Selesai')">
+          <button class="btn-xs btn-success" onclick="updateStatus('${ticket.id}', 'Selesai')" title="Tandai selesai">
             ✓ Selesai
+          </button>
+          <button class="btn-xs btn-outline-danger" onclick="confirmDeleteTicket('${ticket.id}', '${safeRoom}')" title="Hapus tiket ini (Perlu Password Super Admin)">
+            🗑️
           </button>
         </div>
       `;
     } else if (ticket.status === 'Diproses') {
       actionButtons = `
         <div class="action-btn-group">
-          <button class="btn-xs btn-success" onclick="updateStatus('${ticket.id}', 'Selesai')">
+          <button class="btn-xs btn-success" onclick="updateStatus('${ticket.id}', 'Selesai')" title="Tandai selesai">
             ✓ Selesaikan
+          </button>
+          <button class="btn-xs btn-outline-danger" onclick="confirmDeleteTicket('${ticket.id}', '${safeRoom}')" title="Hapus tiket ini (Perlu Password Super Admin)">
+            🗑️
           </button>
         </div>
       `;
     } else {
       actionButtons = `
-        <div style="font-size: 0.75rem; color: #059669; font-weight: 700;">
-          ⏱️ Selesai (${formatDuration(ticket.resolutionTimeSeconds)})
+        <div class="action-btn-group">
+          <span style="font-size: 0.75rem; color: #059669; font-weight: 700;">
+            ⏱️ Selesai (${formatDuration(ticket.resolutionTimeSeconds)})
+          </span>
+          <button class="btn-xs btn-outline-danger" onclick="confirmDeleteTicket('${ticket.id}', '${safeRoom}')" title="Hapus tiket ini (Perlu Password Super Admin)">
+            🗑️
+          </button>
         </div>
       `;
     }
@@ -671,6 +695,35 @@ async function updateStatus(ticketId, newStatus, handledBy = "") {
     alert('Terjadi kesalahan jaringan.');
   }
 }
+
+window.confirmDeleteTicket = function(ticketId, roomName) {
+  window.requestSuperAdminAuth({
+    title: 'Otorisasi Hapus Riwayat Panggilan',
+    desc: `Penghapusan riwayat tiket Ruang ${roomName || ''} (ID: ${ticketId}) dilindungi. Masukkan kata sandi Super Admin untuk melanjutkan.`,
+    onSuccess: async () => {
+      try {
+        const res = await fetch(`/api/admin/tickets/${encodeURIComponent(ticketId)}/delete`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (data.success) {
+          latestLoadedTickets = latestLoadedTickets.filter(t => t.id !== ticketId);
+          knownTicketIds.delete(ticketId);
+          saveCachedTickets(latestLoadedTickets);
+          saveStoredKnownTicketIds(knownTicketIds);
+          loadTickets();
+        } else {
+          alert('Gagal menghapus tiket: ' + (data.error || 'Terjadi kesalahan sistem'));
+        }
+      } catch (err) {
+        console.error('Error deleting ticket:', err);
+        alert('Terjadi kesalahan jaringan saat menghapus tiket.');
+      }
+    }
+  });
+};
 
 // Background Web Worker Ticker (Kebal terhadap Browser Tab Throttling saat tab di background)
 function setupBackgroundWorker() {

@@ -500,6 +500,28 @@ function appendTelegramMessages(id, newMessages) {
   return null;
 }
 
+async function deleteTicketAsync(id) {
+  const tickets = await readTicketsAsync();
+  const index = tickets.findIndex(t => t.id === id);
+  if (index !== -1) {
+    const deleted = tickets.splice(index, 1)[0];
+    await saveTicketsAsync(tickets);
+    return deleted;
+  }
+  return null;
+}
+
+function deleteTicket(id) {
+  const tickets = readTickets();
+  const index = tickets.findIndex(t => t.id === id);
+  if (index !== -1) {
+    const deleted = tickets.splice(index, 1)[0];
+    saveTickets(tickets);
+    return deleted;
+  }
+  return null;
+}
+
 async function clearAllTicketsAsync() {
   inMemoryTickets = [];
   await saveTicketsAsync([]);
@@ -532,6 +554,8 @@ module.exports = {
   updateTicketWaStatusAsync,
   appendTelegramMessages,
   appendTelegramMessagesAsync,
+  deleteTicket,
+  deleteTicketAsync,
   clearAllTickets,
   clearAllTicketsAsync,
   testKvConnection,
