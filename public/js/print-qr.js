@@ -160,6 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const baseUrlInput = document.getElementById('baseUrlInput');
   const btnUpdateQr = document.getElementById('btnUpdateQr');
   const roomSelectFilter = document.getElementById('roomSelectFilter');
+  const formatSelect = document.getElementById('formatSelect');
   const btnPrintCurrentView = document.getElementById('btnPrintCurrentView');
   const btnDirectOpenUrl = document.getElementById('btnDirectOpenUrl');
 
@@ -212,8 +213,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // Format Switcher Handler
+  function updateFormatClass() {
+    const selectedFormat = formatSelect ? formatSelect.value : 'standard';
+    document.body.classList.remove('format-standee', 'format-compact');
+    if (selectedFormat === 'standee') {
+      document.body.classList.add('format-standee');
+    } else if (selectedFormat === 'compact') {
+      document.body.classList.add('format-compact');
+    }
+  }
+
   // Initial render
   updateDirectLink();
+  updateFormatClass();
   renderCards();
 
   // Listeners
@@ -230,6 +243,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   baseUrlInput.addEventListener('input', updateDirectLink);
   roomSelectFilter.addEventListener('change', renderCards);
+  if (formatSelect) {
+    formatSelect.addEventListener('change', () => {
+      updateFormatClass();
+    });
+  }
 
   btnPrintCurrentView.addEventListener('click', () => {
     window.ensureSuperAdmin({
@@ -266,42 +284,101 @@ document.addEventListener('DOMContentLoaded', async () => {
       const qrElementId = `qr-canvas-${idx}`;
 
       cardEl.innerHTML = `
-        <div>
-          <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
-            <img src="/images/logo-sbm-itb.png" alt="SBM ITB Logo" style="height: 40px; max-width: 90%; object-fit: contain;">
-          </div>
-          <div class="qr-header-subtitle">SEKOLAH BISNIS DAN MANAJEMEN</div>
-          <div class="qr-header-title">INSTITUT TEKNOLOGI BANDUNG</div>
-          <div style="font-size: 0.75rem; color: #64748B; font-weight: 600;">KAMPUS JAKARTA</div>
+        <!-- 1. TOP HIGH-VISIBILITY BANNER -->
+        <div class="qr-top-highlight-badge">
+          <span class="pulse-dot"></span>
+          🚨 BANTUAN LAYANAN TEKNIS KELAS
+          <span class="pulse-dot"></span>
         </div>
 
-        <div class="qr-room-tag">
-          RUANG ${room.toUpperCase()}
+        <!-- 2. BRANDING SBM ITB -->
+        <div class="qr-brand-container">
+          <img src="/images/logo-sbm-itb.png" alt="SBM ITB Logo" class="qr-brand-logo">
+        </div>
+        <div class="qr-header-subtitle">SEKOLAH BISNIS DAN MANAJEMEN</div>
+        <div class="qr-header-title">INSTITUT TEKNOLOGI BANDUNG</div>
+        <div class="qr-header-campus">KAMPUS JAKARTA</div>
+
+        <!-- 3. ULTRA-PROMINENT ROOM BANNER -->
+        <div class="qr-room-banner">
+          <div class="qr-room-label">📍 LOKASI KELAS</div>
+          <div class="qr-room-name">RUANG ${escapeHTML(room.toUpperCase())}</div>
         </div>
 
-        <div class="qr-box">
+        <!-- 4. QR CODE VIEWFINDER / SCANNER FRAME -->
+        <div class="qr-scanner-frame">
+          <div class="corner-tr"></div>
+          <div class="corner-bl"></div>
           <div id="${qrElementId}"></div>
-        </div>
-
-        <div>
-          <div class="qr-instruction-bold">
-            SCAN UNTUK BANTUAN TEKNIS
+          <div class="qr-scan-instruction">
+            📱 ARAHKAN KAMERA HP KE QR
           </div>
-          <div class="qr-features-list">
-            Proyektor • Audio / Mic • Suhu AC • Wi-Fi / Listrik
-          </div>
-          <div class="qr-footer-desc">
-            Bantuan darurat kelas • Notifikasi langsung diteruskan ke Staf IT/Support
+          <div class="qr-scan-subtext">
+            Buka Kamera / Google Lens • Tanpa Install Aplikasi
           </div>
         </div>
 
-        <!-- Per-Room Print & Download Actions -->
+        <!-- 5. HIGHLIGHTED ISSUE CATEGORIES GRID (4 KATEGORI) -->
+        <div class="qr-issues-grid">
+          <div class="qr-issue-pill">
+            <span class="icon">🖥️</span>
+            <span>SmartBoard/Projector</span>
+          </div>
+          <div class="qr-issue-pill">
+            <span class="icon">🎤</span>
+            <span>Mic & Audio</span>
+          </div>
+          <div class="qr-issue-pill">
+            <span class="icon">⚡</span>
+            <span>Listrik</span>
+          </div>
+          <div class="qr-issue-pill">
+            <span class="icon">🛠️</span>
+            <span>Bantuan Lain</span>
+          </div>
+        </div>
+
+        <!-- 6. 3-STEP QUICK WORKFLOW GUIDE -->
+        <div class="qr-steps-container">
+          <div class="qr-step-item">
+            <span class="qr-step-num">1</span>
+            <span>Scan QR</span>
+          </div>
+          <span class="qr-step-arrow">➔</span>
+          <div class="qr-step-item">
+            <span class="qr-step-num">2</span>
+            <span>Pilih Kendala</span>
+          </div>
+          <span class="qr-step-arrow">➔</span>
+          <div class="qr-step-item">
+            <span class="qr-step-num">3</span>
+            <span>Teknisi Tiba</span>
+          </div>
+        </div>
+
+        <!-- Standee fold line for desk tent mode -->
+        <div class="standee-fold-line"></div>
+
+        <!-- 7. FOOTER SLA & RESPONSE TIME ASSURANCE -->
+        <div class="qr-card-footer">
+          <div class="qr-footer-sla">
+            ⚡ Respon Cepat 1 - 3 Menit Langsung ke Ruangan Ini
+          </div>
+          <div class="qr-footer-team">
+            Tim Operasional & Dukungan Teknis Perkuliahan • SBM ITB Kampus Jakarta
+          </div>
+        </div>
+
+        <!-- 8. PER-ROOM PRINT & DOWNLOAD ACTIONS -->
         <div class="qr-card-actions no-print">
-          <button class="btn-card-action" onclick="printSingleRoom('${cardEl.id}')">
+          <button class="btn-card-action btn-action-primary" onclick="printSingleRoom('${cardEl.id}')" title="Cetak halaman PDF khusus ruangan ini">
             🖨️ Cetak Ruang Ini
           </button>
-          <button class="btn-card-action" onclick="downloadQrImage('${qrElementId}', '${room}')">
-            📥 Download QR (PNG)
+          <button class="btn-card-action" onclick="downloadCardPoster('${cardEl.id}', '${escapeHTML(room)}')" title="Download kartu lengkap sebagai gambar PNG">
+            🖼️ Download Poster
+          </button>
+          <button class="btn-card-action" onclick="downloadQrImage('${qrElementId}', '${escapeHTML(room)}')" title="Download QR code saja">
+            📥 Download QR
           </button>
         </div>
       `;
@@ -311,8 +388,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Generate QR Code with High Error Correction
       new QRCode(qrElementId, {
         text: callUrl,
-        width: 180,
-        height: 180,
+        width: 175,
+        height: 175,
         colorDark: "#0F2C59",
         colorLight: "#FFFFFF",
         correctLevel: QRCode.CorrectLevel.H
@@ -380,7 +457,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (img) {
         img.src = canvas.toDataURL('image/png');
       }
-    }, 100);
+    }, 120);
   }
 
   function drawRoundedRect(ctx, x, y, width, height, radius) {
@@ -397,7 +474,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     ctx.closePath();
   }
 
-  // Global helper functions - Super Admin Protected
+  // --- ACTIONS & EXPORTS ---
+
+  // 1. Print Single Room
   window.printSingleRoom = (cardElementId) => {
     window.ensureSuperAdmin({
       title: 'Otorisasi Cetak Kartu QR Ruangan',
@@ -416,6 +495,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
+  // 2. Download Raw QR Code Image
   window.downloadQrImage = (canvasContainerId, roomName) => {
     window.ensureSuperAdmin({
       title: 'Otorisasi Download QR Ruangan',
@@ -425,11 +505,51 @@ document.addEventListener('DOMContentLoaded', async () => {
         const canvas = containerEl ? containerEl.querySelector('canvas') : null;
         if (canvas) {
           const link = document.createElement('a');
-          link.download = `QR_Layanan_SBM_ITB_${roomName.replace(/\s+/g, '_')}.png`;
+          link.download = `QR_Bantuan_Teknis_${roomName.replace(/\s+/g, '_')}.png`;
           link.href = canvas.toDataURL('image/png');
           link.click();
         } else {
           alert('Gagal mendownload gambar QR.');
+        }
+      }
+    });
+  };
+
+  // 3. Download Entire Poster/Card as High-Res PNG Image
+  window.downloadCardPoster = (cardElementId, roomName) => {
+    window.ensureSuperAdmin({
+      title: 'Otorisasi Download Poster Kartu QR',
+      desc: 'Pengunduhan poster kartu QR dilindungi. Masukkan kata sandi Super Admin untuk melanjutkan.',
+      onSuccess: async () => {
+        const cardEl = document.getElementById(cardElementId);
+        if (!cardEl) return;
+
+        if (typeof html2canvas === 'undefined') {
+          // Fallback to QR only if html2canvas not loaded
+          window.downloadQrImage(cardEl.querySelector('.qr-scanner-frame div[id^="qr-canvas"]').id, roomName);
+          return;
+        }
+
+        const actionsEl = cardEl.querySelector('.qr-card-actions');
+        if (actionsEl) actionsEl.style.display = 'none';
+
+        try {
+          const canvas = await html2canvas(cardEl, {
+            scale: 2.5, // Ultra-sharp 300 DPI equivalent export
+            useCORS: true,
+            backgroundColor: '#FFFFFF',
+            logging: false
+          });
+
+          const link = document.createElement('a');
+          link.download = `Poster_Bantuan_Teknis_Kelas_${roomName.replace(/\s+/g, '_')}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        } catch (err) {
+          console.error('Error generating card poster image:', err);
+          alert('Terjadi kendala saat generate gambar poster. Silakan gunakan fungsi Cetak PDF.');
+        } finally {
+          if (actionsEl) actionsEl.style.display = 'flex';
         }
       }
     });

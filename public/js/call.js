@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const rateLimitText = document.getElementById('rateLimitText');
   const rateLimitBadge = document.getElementById('rateLimitBadge');
 
-  let selectedCategory = 'Umum';
+  let selectedCategory = 'SmartBoard/Projector';
   let activeTicketId = null;
   let pollInterval = null;
   let geofencingConfig = {
@@ -55,19 +55,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Helper untuk update status wajib/opsional catatan kendala
   function updateNotesRequirement(category) {
-    const isUmum = (category === 'Umum');
+    const isOther = (category === 'Bantuan Lain' || category === 'Umum');
     if (notesLabel) {
-      if (isUmum) {
+      if (isOther) {
         notesLabel.innerHTML = 'Catatan kendala / rincian masalah <span style="color: #DC2626;">(wajib diisi)</span>: <span style="color: #DC2626;">*</span>';
       } else {
         notesLabel.innerHTML = 'Catatan kendala / keterangan tambahan (opsional):';
       }
     }
     if (inputOptionalNotes) {
-      if (isUmum) {
-        inputOptionalNotes.placeholder = 'Tuliskan catatan kendala yang dialami... (wajib diisi)';
+      if (isOther) {
+        inputOptionalNotes.placeholder = 'Tuliskan rincian kendala yang dialami... (wajib diisi)';
       } else {
-        inputOptionalNotes.placeholder = 'Tuliskan catatan tambahan jika ada...';
+        inputOptionalNotes.placeholder = 'Tuliskan catatan tambahan jika ada (opsional)...';
         inputOptionalNotes.style.borderColor = '';
         inputOptionalNotes.style.boxShadow = '';
       }
@@ -204,12 +204,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Confirm and Send Call Button Click
   btnConfirmSend.addEventListener('click', async () => {
-    const finalCategory = selectedCategory || 'Umum';
+    const finalCategory = selectedCategory || 'SmartBoard/Projector';
     const finalNotes = inputOptionalNotes ? inputOptionalNotes.value.trim() : '';
 
-    // Validasi: Jika kategori Umum dipilih, catatan kendala WAJIB diisi
-    if (finalCategory === 'Umum' && !finalNotes) {
-      alert('⚠️ Catatan kendala wajib diisi jika memilih kategori "Umum".\n\nSilakan tuliskan penjelasan singkat mengenai kendala yang Anda alami agar tim teknis dapat membawa peralatan yang tepat.');
+    // Validasi: Jika kategori Bantuan Lain dipilih, catatan kendala WAJIB diisi
+    if ((finalCategory === 'Bantuan Lain' || finalCategory === 'Umum') && !finalNotes) {
+      alert('⚠️ Catatan kendala wajib diisi jika memilih kategori "Bantuan Lain".\n\nSilakan tuliskan penjelasan singkat mengenai kendala yang Anda alami agar tim teknis dapat membawa peralatan yang tepat.');
       if (inputOptionalNotes) {
         inputOptionalNotes.focus();
         inputOptionalNotes.style.borderColor = '#DC2626';
