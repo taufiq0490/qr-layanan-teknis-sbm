@@ -665,7 +665,7 @@ app.post('/api/tickets/:id/claim', async (req, res) => {
   }
 
   const safeStaffName = sanitizeString(staffName.trim());
-  const updatedTicket = await updateTicketStatusAsync(id, 'Diproses', safeStaffName);
+  let updatedTicket = await updateTicketStatusAsync(id, 'Diproses', safeStaffName);
 
   if (!updatedTicket) {
     return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan.' });
@@ -674,16 +674,20 @@ app.post('/api/tickets/:id/claim', async (req, res) => {
   // Broadcast realtime event instantly to dashboards
   broadcastRealtimeEvent('ticket_updated', { ticket: updatedTicket });
 
-  // Broadcast status update to Telegram group in background
-  sendTelegramStatusUpdate({
-    ticket: updatedTicket,
-    newStatus: 'Diproses',
-    handledBy: safeStaffName
-  }).then(res => {
-    if (res && Array.isArray(res.telegramMessages) && res.telegramMessages.length > 0) {
-      appendTelegramMessagesAsync(updatedTicket.id, res.telegramMessages).catch(() => {});
+  // Broadcast status update to Telegram group and await to ensure message ID is saved reliably
+  try {
+    const teleRes = await sendTelegramStatusUpdate({
+      ticket: updatedTicket,
+      newStatus: 'Diproses',
+      handledBy: safeStaffName
+    });
+    if (teleRes && Array.isArray(teleRes.telegramMessages) && teleRes.telegramMessages.length > 0) {
+      const refreshed = await appendTelegramMessagesAsync(updatedTicket.id, teleRes.telegramMessages);
+      if (refreshed) updatedTicket = refreshed;
     }
-  }).catch(e => console.error('Telegram broadcast error:', e));
+  } catch (e) {
+    console.error('Telegram broadcast error on claim:', e);
+  }
 
   res.json({
     success: true,
@@ -706,12 +710,16 @@ app.post('/api/tickets/:id/complete', async (req, res) => {
   // Broadcast realtime event instantly to dashboards
   broadcastRealtimeEvent('ticket_updated', { ticket: updatedTicket });
 
-  // Broadcast completion update to Telegram group in background
-  sendTelegramStatusUpdate({
-    ticket: updatedTicket,
-    newStatus: 'Selesai',
-    handledBy: updatedTicket.handledBy
-  }).catch(e => console.error('Telegram broadcast error:', e));
+  // Await Telegram message deletion so all messages (panggilan & proses) are deleted reliably
+  try {
+    await sendTelegramStatusUpdate({
+      ticket: updatedTicket,
+      newStatus: 'Selesai',
+      handledBy: updatedTicket.handledBy
+    });
+  } catch (e) {
+    console.error('Telegram delete on complete error:', e);
+  }
 
   res.json({
     success: true,
@@ -750,7 +758,7 @@ app.patch('/api/tickets/:id/status', requireAdminAuthAPI, async (req, res) => {
     return res.status(400).json({ success: false, error: 'Status tidak valid' });
   }
 
-  const updatedTicket = await updateTicketStatusAsync(id, status, handledBy);
+  let updatedTicket = await updateTicketStatusAsync(id, status, handledBy);
   if (!updatedTicket) {
     return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan' });
   }
@@ -758,13 +766,21 @@ app.patch('/api/tickets/:id/status', requireAdminAuthAPI, async (req, res) => {
   // Broadcast realtime event instantly to dashboards
   broadcastRealtimeEvent('ticket_updated', { ticket: updatedTicket });
 
-  // Broadcast status update to Telegram group in background
+  // Broadcast status update to Telegram group (and delete messages if Selesai)
   if (['Diproses', 'Selesai'].includes(status)) {
-    sendTelegramStatusUpdate({
-      ticket: updatedTicket,
-      newStatus: status,
-      handledBy: updatedTicket.handledBy
-    }).catch(e => console.error('Telegram broadcast error:', e));
+    try {
+      const teleRes = await sendTelegramStatusUpdate({
+        ticket: updatedTicket,
+        newStatus: status,
+        handledBy: updatedTicket.handledBy
+      });
+      if (status === 'Diproses' && teleRes && Array.isArray(teleRes.telegramMessages) && teleRes.telegramMessages.length > 0) {
+        const refreshed = await appendTelegramMessagesAsync(updatedTicket.id, teleRes.telegramMessages);
+        if (refreshed) updatedTicket = refreshed;
+      }
+    } catch (e) {
+      console.error('Telegram broadcast error on status patch:', e);
+    }
   }
 
   res.json({ success: true, ticket: updatedTicket });
@@ -791,6 +807,8 @@ app.delete('/api/admin/tickets/:id', requireSuperAdminAuthAPI, async (req, res) 
     if (!deleted) {
       return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan.' });
     }
+    const { deleteTelegramMessages } = require('./services/telegramGateway');
+    deleteTelegramMessages(deleted).catch(() => {});
     broadcastRealtimeEvent('ticket_deleted', { id, ticket: deleted });
     res.json({ success: true, message: `Tiket ${id} berhasil dihapus.`, ticket: deleted });
   } catch (err) {
@@ -817,6 +835,8 @@ app.post('/api/admin/tickets/:id/delete', async (req, res) => {
     if (!deleted) {
       return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan.' });
     }
+    const { deleteTelegramMessages } = require('./services/telegramGateway');
+    deleteTelegramMessages(deleted).catch(() => {});
     broadcastRealtimeEvent('ticket_deleted', { id, ticket: deleted });
     res.json({ success: true, message: `Tiket ${id} berhasil dihapus.`, ticket: deleted });
   } catch (err) {

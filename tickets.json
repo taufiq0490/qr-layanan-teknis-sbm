@@ -1,20 +1,20 @@
 [
   {
-    "id": "TICK-MTE1S0BS-342",
+    "id": "TICK-MTF3XC24-323",
     "room": "Henk Uno",
-    "category": "Connect Smart Board",
+    "category": "Mic & Audio",
     "notes": "",
     "status": "Selesai",
-    "handledBy": "Amir",
-    "createdAt": "2026-08-29T07:16:50.728Z",
-    "claimedAt": "2026-08-29T07:17:14.989Z",
-    "completedAt": "2026-08-29T07:17:23.436Z",
-    "resolutionTimeSeconds": 33,
-    "updatedAt": "2026-08-29T07:17:23.436Z",
+    "handledBy": "Bpk. Gandi",
+    "createdAt": "2026-08-30T01:04:44.620Z",
+    "claimedAt": "2026-08-30T01:08:24.838Z",
+    "completedAt": "2026-08-30T01:09:15.203Z",
+    "resolutionTimeSeconds": 271,
+    "updatedAt": "2026-08-30T01:09:15.203Z",
     "waStatus": {
       "sent": true,
       "provider": "telegram",
-      "timestamp": "2026-08-29T07:16:51.439Z",
+      "timestamp": "2026-08-30T01:04:45.326Z",
       "details": {
         "waResult": {
           "success": false
@@ -25,7 +25,7 @@
           "telegramMessages": [
             {
               "chatId": "-5411652328",
-              "messageId": 156
+              "messageId": 164
             }
           ],
           "results": [
@@ -35,7 +35,7 @@
               "data": {
                 "ok": true,
                 "result": {
-                  "message_id": 156,
+                  "message_id": 164,
                   "from": {
                     "id": 8781937865,
                     "is_bot": true,
@@ -48,8 +48,8 @@
                     "type": "group",
                     "all_members_are_administrators": false
                   },
-                  "date": 1787987811,
-                  "text": "🚨 PANGGILAN BANTUAN TEKNIS SBM ITB\n\nMohon bantuan di ruang Henk Uno SEGERA!\n\n📌 Kendala: Connect Smart Board\n\n🕒 Waktu: 29 Agu 2026, 14.16 WIB\n🆔 ID Tiket: #BS-342",
+                  "date": 1788051885,
+                  "text": "🚨 PANGGILAN BANTUAN TEKNIS SBM ITB\n\nMohon bantuan di ruang Henk Uno SEGERA!\n\n📌 Kendala: Mic & Audio\n\n🕒 Waktu: 30 Agu 2026, 08.04 WIB\n🆔 ID Tiket: #24-323",
                   "entities": [
                     {
                       "offset": 3,
@@ -67,17 +67,17 @@
                       "type": "bold"
                     },
                     {
-                      "offset": 114,
+                      "offset": 106,
                       "length": 6,
                       "type": "bold"
                     },
                     {
-                      "offset": 147,
+                      "offset": 139,
                       "length": 9,
                       "type": "bold"
                     },
                     {
-                      "offset": 157,
+                      "offset": 149,
                       "length": 7,
                       "type": "code"
                     }
@@ -87,7 +87,7 @@
                       [
                         {
                           "text": "🚀 Klaim & Tangani Tiket",
-                          "url": "https://qr-layanan-teknis-sbm.vercel.app/claim?ticket=TICK-MTE1S0BS-342"
+                          "url": "https://qr-layanan-teknis-sbm.vercel.app/claim?ticket=TICK-MTF3XC24-323"
                         }
                       ]
                     ]
@@ -102,11 +102,118 @@
     "telegramMessages": [
       {
         "chatId": "-5411652328",
-        "messageId": 156
+        "messageId": 164
+      }
+    ]
+  },
+  {
+    "id": "TICK-MTE3DIAM-680",
+    "room": "Henk Uno",
+    "category": "Mic & Audio",
+    "notes": "",
+    "status": "Selesai",
+    "handledBy": "Taufiq",
+    "createdAt": "2026-08-29T08:01:33.406Z",
+    "claimedAt": "2026-08-29T08:02:00.876Z",
+    "completedAt": "2026-08-29T08:05:44.012Z",
+    "resolutionTimeSeconds": 251,
+    "updatedAt": "2026-08-29T08:05:44.012Z",
+    "waStatus": {
+      "sent": true,
+      "provider": "telegram",
+      "timestamp": "2026-08-29T08:01:34.109Z",
+      "details": {
+        "waResult": {
+          "success": false
+        },
+        "teleResult": {
+          "success": true,
+          "provider": "telegram",
+          "telegramMessages": [
+            {
+              "chatId": "-5411652328",
+              "messageId": 158
+            }
+          ],
+          "results": [
+            {
+              "chatId": "-5411652328",
+              "success": true,
+              "data": {
+                "ok": true,
+                "result": {
+                  "message_id": 158,
+                  "from": {
+                    "id": 8781937865,
+                    "is_bot": true,
+                    "first_name": "SBM ITB Support",
+                    "username": "SBMITB_Support_bot"
+                  },
+                  "chat": {
+                    "id": -5411652328,
+                    "title": "SBM ITB JKT",
+                    "type": "group",
+                    "all_members_are_administrators": false
+                  },
+                  "date": 1787990493,
+                  "text": "🚨 PANGGILAN BANTUAN TEKNIS SBM ITB\n\nMohon bantuan di ruang Henk Uno SEGERA!\n\n📌 Kendala: Mic & Audio\n\n🕒 Waktu: 29 Agu 2026, 15.01 WIB\n🆔 ID Tiket: #AM-680",
+                  "entities": [
+                    {
+                      "offset": 3,
+                      "length": 32,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 60,
+                      "length": 8,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 81,
+                      "length": 8,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 106,
+                      "length": 6,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 139,
+                      "length": 9,
+                      "type": "bold"
+                    },
+                    {
+                      "offset": 149,
+                      "length": 7,
+                      "type": "code"
+                    }
+                  ],
+                  "reply_markup": {
+                    "inline_keyboard": [
+                      [
+                        {
+                          "text": "🚀 Klaim & Tangani Tiket",
+                          "url": "https://qr-layanan-teknis-sbm.vercel.app/claim?ticket=TICK-MTE3DIAM-680"
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "telegramMessages": [
+      {
+        "chatId": "-5411652328",
+        "messageId": 158
       },
       {
         "chatId": "-5411652328",
-        "messageId": 157
+        "messageId": 159
       }
     ]
   },
@@ -116,7 +223,7 @@
     "category": "Umum",
     "notes": "Wifi mati",
     "status": "Selesai",
-    "handledBy": "Amir",
+    "handledBy": "Bpk. Amir",
     "createdAt": "2026-08-29T03:00:15.933Z",
     "claimedAt": "2026-08-29T03:07:09.090Z",
     "completedAt": "2026-08-29T03:09:57.392Z",
@@ -237,7 +344,7 @@
     "category": "Connect Smart Board",
     "notes": "",
     "status": "Selesai",
-    "handledBy": "Amir",
+    "handledBy": "Bpk. Amir",
     "createdAt": "2026-08-29T00:56:12.399Z",
     "claimedAt": "2026-08-29T00:56:45.992Z",
     "completedAt": "2026-08-29T00:58:12.918Z",

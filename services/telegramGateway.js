@@ -106,13 +106,26 @@ async function deleteTelegramMessages(ticket) {
   const config = readConfig();
   const teleConfig = config.telegramGateway || {};
   const botToken = teleConfig.botToken || '';
-  if (!botToken || !ticket || !Array.isArray(ticket.telegramMessages) || ticket.telegramMessages.length === 0) {
+  if (!botToken || !ticket) {
     return { success: true, count: 0 };
   }
 
-  console.log(`[Telegram Gateway] Deleting ${ticket.telegramMessages.length} message(s) for Ticket #${ticket.id.slice(-6)}...`);
+  let msgs = Array.isArray(ticket.telegramMessages) ? ticket.telegramMessages : [];
+  if (msgs.length === 0 && ticket.id) {
+    const { getTicketByIdAsync } = require('./storage');
+    const freshTicket = await getTicketByIdAsync(ticket.id);
+    if (freshTicket && Array.isArray(freshTicket.telegramMessages)) {
+      msgs = freshTicket.telegramMessages;
+    }
+  }
 
-  const deletePromises = ticket.telegramMessages.map(async (msg) => {
+  if (msgs.length === 0) {
+    return { success: true, count: 0 };
+  }
+
+  console.log(`[Telegram Gateway] Deleting ${msgs.length} message(s) for Ticket #${ticket.id.slice(-6)}...`);
+
+  const deletePromises = msgs.map(async (msg) => {
     if (!msg || !msg.chatId || !msg.messageId) return { success: false };
     try {
       const res = await fetch(`https://api.telegram.org/bot${botToken}/deleteMessage`, {
