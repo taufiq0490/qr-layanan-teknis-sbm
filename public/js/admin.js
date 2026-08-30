@@ -512,9 +512,23 @@ async function loadTickets() {
     }
 
     // Update Stats
+    const today = new Date();
+    const isToday = (dateStr) => {
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return false;
+      return d.getDate() === today.getDate() &&
+             d.getMonth() === today.getMonth() &&
+             d.getFullYear() === today.getFullYear();
+    };
+
+    const selesaiHariIni = latestLoadedTickets.filter(t => 
+      t.status === 'Selesai' && isToday(t.completedAt || t.createdAt)
+    ).length;
+
     document.getElementById('statMenunggu').textContent = waitingCount;
     document.getElementById('statDiproses').textContent = latestLoadedTickets.filter(t => t.status === 'Diproses').length;
-    document.getElementById('statSelesai').textContent = latestLoadedTickets.filter(t => t.status === 'Selesai').length;
+    document.getElementById('statSelesai').textContent = selesaiHariIni;
     document.getElementById('statTotal').textContent = latestLoadedTickets.length;
 
     // Filter tickets
