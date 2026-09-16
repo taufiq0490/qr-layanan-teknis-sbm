@@ -204,10 +204,36 @@ function saveCachedTickets(tickets) {
 }
 
 // SSE Real-time Events Listener for Reports
+// Dengan fallback ke polling otomatis jika SSE tidak tersedia (Vercel Serverless)
+let _reportsPollingInterval = null;
+
+function startReportsPollingFallback() {
+  if (_reportsPollingInterval) return;
+  console.info('[Reports Realtime] Beralih ke mode polling (10 detik) — SSE tidak tersedia di Vercel.');
+  _reportsPollingInterval = setInterval(() => {
+    loadTickets();
+  }, 10000);
+}
+
 function setupRealtimeReportsEvents() {
-  if (!window.EventSource) return;
+  if (!window.EventSource) {
+    startReportsPollingFallback();
+    return;
+  }
   try {
     const es = new EventSource('/api/events');
+
+    // Deteksi polling-mode dari server (Vercel)
+    fetch('/api/events')
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.mode === 'polling') {
+          es.close();
+          startReportsPollingFallback();
+        }
+      })
+      .catch(() => {});
+
     es.addEventListener('tickets_cleared', () => {
       allTickets = [];
       saveCachedTickets([]);
@@ -220,10 +246,17 @@ function setupRealtimeReportsEvents() {
     es.addEventListener('new_ticket', () => {
       loadTickets();
     });
+
+    es.onerror = () => {
+      es.close();
+      startReportsPollingFallback();
+    };
   } catch (e) {
     console.warn('Realtime SSE error on reports:', e);
+    startReportsPollingFallback();
   }
 }
+
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {

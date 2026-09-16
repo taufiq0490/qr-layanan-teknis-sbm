@@ -80,6 +80,18 @@ function broadcastRealtimeEvent(eventType, data) {
 
 // SSE stream endpoint
 app.get('/api/events', (req, res) => {
+  // SSE tidak kompatibel dengan Vercel Serverless:
+  // Koneksi long-running akan membuat Lambda tetap hidup dan menghabiskan
+  // Fluid Provisioned Memory. Gunakan polling di sisi client sebagai gantinya.
+  if (process.env.VERCEL) {
+    res.setHeader('Content-Type', 'application/json');
+    return res.json({
+      mode: 'polling',
+      message: 'Realtime SSE tidak tersedia di mode serverless Vercel. Gunakan polling /api/tickets setiap beberapa detik.'
+    });
+  }
+
+  // Mode lokal / VPS: SSE tetap aktif
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
@@ -90,7 +102,7 @@ app.get('/api/events', (req, res) => {
   // Initial ping
   res.write(`event: connected\ndata: ${JSON.stringify({ time: Date.now() })}\n\n`);
 
-  // Heartbeat every 20s
+  // Heartbeat diperlambat ke 45 detik (hemat resource dibanding 20 detik)
   const keepAlive = setInterval(() => {
     try {
       res.write(': keepalive\n\n');
@@ -98,13 +110,14 @@ app.get('/api/events', (req, res) => {
       clearInterval(keepAlive);
       sseClients.delete(res);
     }
-  }, 20000);
+  }, 45000);
 
   req.on('close', () => {
     clearInterval(keepAlive);
     sseClients.delete(res);
   });
 });
+
 
 // --- RATE LIMITING MIDDLEWARE ---
 // Limit: max 3 calls per 2 minutes (120,000 ms) per IP & Room

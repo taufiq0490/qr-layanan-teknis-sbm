@@ -140,8 +140,21 @@ async function testKvConnection(url, token) {
   }
 }
 
-// Cloud KV / Upstash Redis REST integration for Vercel & Local
+// Cloud KV / Upstash Redis REST integration for Vercel
+// Cache in-memory agar tidak setiap request langsung ke Upstash (hemat Function Invocations)
+let _kvTicketsCache = null;
+let _kvTicketsCacheTime = 0;
+let _kvConfigCache = null;
+let _kvConfigCacheTime = 0;
+const KV_CACHE_TTL_MS = 5000; // 5 detik TTL
+
 async function getKvConfig() {
+  const now = Date.now();
+  // Gunakan cache jika masih segar (< 5 detik)
+  if (_kvConfigCache !== null && (now - _kvConfigCacheTime) < KV_CACHE_TTL_MS) {
+    return _kvConfigCache;
+  }
+
   const { kvUrl, kvToken } = getKvCredentials();
   if (!kvUrl || !kvToken) return null;
   try {
@@ -152,7 +165,10 @@ async function getKvConfig() {
     const data = await res.json();
     if (data && data.result) {
       const parsed = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
-      return parsed && typeof parsed === 'object' ? parsed : null;
+      const result = parsed && typeof parsed === 'object' ? parsed : null;
+      _kvConfigCache = result;
+      _kvConfigCacheTime = now;
+      return result;
     }
     return null;
   } catch (e) {
@@ -162,6 +178,10 @@ async function getKvConfig() {
 }
 
 async function setKvConfig(config) {
+  // Invalidasi cache saat data disimpan
+  _kvConfigCache = null;
+  _kvConfigCacheTime = 0;
+
   const { kvUrl, kvToken } = getKvCredentials();
   if (!kvUrl || !kvToken) return false;
   try {
@@ -198,6 +218,12 @@ async function saveConfigAsync(config) {
 
 // Cloud KV / Upstash Redis REST integration for Vercel
 async function getKvTickets() {
+  const now = Date.now();
+  // Gunakan cache jika masih segar (< 5 detik)
+  if (_kvTicketsCache !== null && (now - _kvTicketsCacheTime) < KV_CACHE_TTL_MS) {
+    return _kvTicketsCache;
+  }
+
   const { kvUrl, kvToken } = getKvCredentials();
   if (!kvUrl || !kvToken) return null;
   try {
@@ -208,7 +234,10 @@ async function getKvTickets() {
     const data = await res.json();
     if (data && data.result !== undefined && data.result !== null) {
       const parsed = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
-      return Array.isArray(parsed) ? parsed : [];
+      const result = Array.isArray(parsed) ? parsed : [];
+      _kvTicketsCache = result;
+      _kvTicketsCacheTime = now;
+      return result;
     }
     return [];
   } catch (e) {
@@ -218,6 +247,10 @@ async function getKvTickets() {
 }
 
 async function setKvTickets(tickets) {
+  // Invalidasi cache saat data disimpan
+  _kvTicketsCache = null;
+  _kvTicketsCacheTime = 0;
+
   const { kvUrl, kvToken } = getKvCredentials();
   if (!kvUrl || !kvToken) return false;
   try {
@@ -236,6 +269,7 @@ async function setKvTickets(tickets) {
     return false;
   }
 }
+
 
 function readTickets() {
   try {

@@ -336,10 +336,47 @@ window.activateAudioSystem = async function() {
 };
 
 // SSE Real-time Events Listener (Instant 0ms push)
+// Dengan fallback ke polling otomatis jika SSE tidak tersedia (Vercel Serverless)
+let _pollingInterval = null;
+
+function startPollingFallback() {
+  if (_pollingInterval) return; // Sudah berjalan
+  console.info('[Realtime] Beralih ke mode polling (7 detik) — SSE tidak tersedia di Vercel.');
+  _pollingInterval = setInterval(() => {
+    loadTickets();
+  }, 7000);
+}
+
 function setupRealtimeEvents() {
-  if (!window.EventSource) return;
+  if (!window.EventSource) {
+    startPollingFallback();
+    return;
+  }
   try {
     const es = new EventSource('/api/events');
+
+    // Deteksi polling-mode dari server (Vercel): periksa first message
+    es.addEventListener('message', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data && data.mode === 'polling') {
+          es.close();
+          startPollingFallback();
+        }
+      } catch (_) {}
+    });
+
+    // Saat koneksi SSE dibuka, cek apakah server mengirim JSON polling-mode
+    fetch('/api/events')
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.mode === 'polling') {
+          es.close();
+          startPollingFallback();
+        }
+      })
+      .catch(() => {}); // Bukan JSON = SSE normal, abaikan
+
     es.addEventListener('new_ticket', (e) => {
       try {
         const payload = JSON.parse(e.data);
@@ -396,10 +433,18 @@ function setupRealtimeEvents() {
       renderTable([]);
       loadTickets();
     });
+
+    es.onerror = () => {
+      // Jika SSE error/disconnect, fallback ke polling
+      es.close();
+      startPollingFallback();
+    };
   } catch (e) {
     console.warn('Realtime SSE error:', e);
+    startPollingFallback();
   }
 }
+
 
 function handleIncomingTicketDirect(ticket) {
   if (!ticket || !ticket.id) return;
