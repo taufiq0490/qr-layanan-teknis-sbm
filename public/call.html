@@ -6,51 +6,64 @@
   <title>Panggilan Bantuan Teknis - SBM ITB Jakarta</title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
-    .wifi-alert-banner {
+    .civitas-alert-banner {
       background: linear-gradient(135deg, #F0F9FF 0%, #FFFFFF 100%);
       border: 1.5px solid #BAE6FD;
-      border-radius: 14px;
-      padding: 16px 20px;
+      border-radius: 16px;
+      padding: 18px 20px;
       margin-bottom: 16px;
       box-shadow: 0 4px 14px rgba(2, 132, 199, 0.08);
       text-align: center;
     }
-    .wifi-alert-title {
-      font-weight: 800;
-      font-size: 0.9rem;
-      color: #0369A1;
-      margin-bottom: 6px;
-      letter-spacing: 0.4px;
-      text-align: center;
-    }
-    .wifi-alert-desc {
-      font-size: 0.84rem;
-      color: #334155;
-      line-height: 1.5;
+    .civitas-banner-logo-wrap {
       margin-bottom: 10px;
-      text-align: center;
-    }
-    .wifi-chips-row {
       display: flex;
-      align-items: center;
       justify-content: center;
-      flex-wrap: wrap;
-      gap: 6px;
-      font-size: 0.8rem;
-      color: #64748B;
-      text-align: center;
-    }
-    .wifi-badge-pill {
-      display: inline-flex;
       align-items: center;
-      gap: 4px;
+    }
+    .civitas-banner-logo {
+      height: 52px;
+      max-width: 90%;
+      object-fit: contain;
+    }
+    .civitas-alert-title {
+      font-weight: 800;
+      font-size: 0.82rem;
+      color: #0369A1;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: inline-block;
       background: #EFF6FF;
       border: 1px solid #BFDBFE;
-      color: #1D4ED8;
-      font-weight: 700;
-      padding: 3px 9px;
-      border-radius: 6px;
-      font-size: 0.78rem;
+      padding: 3px 12px;
+      border-radius: 20px;
+    }
+    .civitas-banner-content {
+      background: #FFFBEB;
+      border: 1.5px solid #FCD34D;
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.07);
+    }
+    .civitas-primary-text {
+      font-size: 1.12rem;
+      font-weight: 800;
+      color: #92400E;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+    .civitas-primary-text strong {
+      color: #78350F;
+    }
+    .civitas-secondary-text {
+      font-size: 0.96rem;
+      font-weight: 600;
+      color: #78350F;
+      line-height: 1.45;
+    }
+    .civitas-secondary-text strong {
+      color: #451A03;
     }
     .rate-limit-badge {
       display: inline-flex;
@@ -414,15 +427,21 @@
 
   <main class="container-sm" style="margin-top: 15px;">
     
-    <!-- Campus Location & Wi-Fi Advisory Banner (Centered, No Pin) -->
-    <div class="wifi-alert-banner" id="wifiBanner">
-      <div class="wifi-alert-title">KETENTUAN LOKASI & JARINGAN KAMPUS</div>
-      <div class="wifi-alert-desc">
-        Panggilan bantuan teknis hanya dapat dilakukan saat Anda <strong>berada di sekitar lingkungan kampus SBM ITB Jakarta</strong>.
+    <!-- Official SBM ITB Civitas Service Advisory Banner -->
+    <div class="civitas-alert-banner" id="civitasBanner">
+      <div class="civitas-banner-logo-wrap">
+        <img src="/images/logo-sbm-itb-banner.png" onerror="this.onerror=null; this.src='/images/logo-sbm-itb.png';" alt="SBM ITB Logo" class="civitas-banner-logo">
       </div>
-      <div class="wifi-chips-row">
-        <span>Disarankan terhubung ke Wi-Fi resmi:</span>
-        <span class="wifi-badge-pill">📶 ITB Hot Spot</span>
+      
+      <div class="civitas-alert-title">KETENTUAN LAYANAN</div>
+
+      <div class="civitas-banner-content">
+        <div class="civitas-primary-text">
+          Layanan ini <strong>hanya untuk Civitas SBM ITB</strong>.
+        </div>
+        <div class="civitas-secondary-text">
+          Untuk selain SBM, silakan hubungi <strong>DEMK (Direktorat Eksekutif Multi Kampus)</strong>.
+        </div>
       </div>
     </div>
 
@@ -446,9 +465,12 @@
         <span>🚨 PANGGIL BANTUAN SEGERA</span>
       </button>
 
-      <!-- Privacy Notice -->
+      <!-- Privacy Notice & Civitas Restriction -->
       <div style="font-size: 0.78rem; color: #64748B; margin-top: 18px; line-height: 1.4;">
-        🔒 Notifikasi langsung diteruskan ke WhatsApp & Telegram Tim Support SBM ITB Jakarta.
+        <div>🔒 Notifikasi langsung diteruskan ke WhatsApp & Telegram Tim Support SBM ITB Jakarta.</div>
+        <div style="margin-top: 8px; font-size: 0.74rem; color: #64748B; border-top: 1px dashed #E2E8F0; padding-top: 8px;">
+          ℹ️ Layanan ini <strong>hanya untuk Civitas SBM ITB</strong>. Untuk selain SBM, silakan hubungi <strong>DEMK (Direktorat Eksekutif Multi Kampus)</strong>.
+        </div>
       </div>
     </div>
 
@@ -461,12 +483,14 @@
         </div>
 
         <div class="modal-body">
-          <!-- Campus Location & Wi-Fi Advisory Notice in Modal -->
-          <div class="modal-wifi-warning">
-            <div class="warning-icon">📍</div>
+          <!-- Civitas Advisory Notice in Modal -->
+          <div class="modal-wifi-warning" style="align-items: center;">
+            <div class="warning-icon">ℹ️</div>
             <div>
-              <strong>Ketentuan Lokasi Panggilan:</strong>
-              <div>Pastikan Anda sedang <strong>berada di sekitar lingkungan kampus SBM ITB Jakarta</strong> dan disarankan terhubung ke Wi-Fi <strong>ITB Hot Spot</strong>.</div>
+              <strong style="font-size: 0.88rem;">Ketentuan Layanan:</strong>
+              <div style="font-size: 0.86rem; font-weight: 600; margin-top: 2px;">
+                Layanan ini <strong>hanya untuk Civitas SBM ITB</strong>. Untuk selain SBM, silakan hubungi <strong>DEMK (Direktorat Eksekutif Multi Kampus)</strong>.
+              </div>
             </div>
           </div>
 

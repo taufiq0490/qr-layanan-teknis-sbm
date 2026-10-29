@@ -367,6 +367,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="qr-footer-team">
             Tim Operasional & Dukungan Teknis Perkuliahan • SBM ITB Kampus Jakarta
           </div>
+          <div style="font-size: 0.58rem; color: #64748B; margin-top: 3px; font-weight: 600;">
+            * Layanan khusus Civitas SBM ITB. Selain SBM silakan hubungi DEMK.
+          </div>
         </div>
 
         <!-- 8. PER-ROOM PRINT & DOWNLOAD ACTIONS -->
